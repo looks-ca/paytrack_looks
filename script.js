@@ -55,22 +55,111 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', toggleTheme);
     });
 
+    // Detectar si estamos en modo de subida móvil por QR (?upload=true)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('upload') === 'true') {
-        document.getElementById('landing-container').classList.add('hidden');
-        document.getElementById('auth-container').classList.add('hidden');
-        document.getElementById('app-container').classList.add('hidden');
-        document.getElementById('client-upload-page').classList.remove('hidden');
+        const landing = document.getElementById('landing-container');
+        const uploadPage = document.getElementById('client-upload-page');
+        if (landing) landing.classList.add('hidden');
+        if (uploadPage) uploadPage.classList.remove('hidden');
         setupMobileUploadHandler();
         return;
     }
 
     setupDniAutocomplete('modal-client-dni', 'modal-client-dni-type', 'modal-client-input', 'modal-client-phone');
     setupDniAutocomplete('cashea-dni', 'cashea-dni-type', 'cashea-client', 'cashea-phone');
-    setupQrGeneratorControls();
     setupFilters();
+    setupQrGenerator();
     initFirebaseListeners();
 });
+
+// Lógica exclusiva para la subida móvil mediante QR
+function setupMobileUploadHandler() {
+    const form = document.getElementById('mobile-upload-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('mobile-file');
+        if (!fileInput || !fileInput.files[0]) return;
+
+        compressImage(fileInput.files[0], 800, 0.7, async (compressedBase64) => {
+            try {
+                const now = new Date();
+                const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+                await addDoc(collection(db, "payments"), {
+                    user: "Cliente Móvil (QR)",
+                    dni: "V-N/D",
+                    phone: "N/D",
+                    method: "Pago Móvil",
+                    amount: 0.00,
+                    ref: "Subida por QR Móvil",
+                    status: "Proceso",
+                    datetime: formattedDateTime,
+                    image: compressedBase64
+                });
+
+                form.classList.add('hidden');
+                document.getElementById('client-success-msg').classList.remove('hidden');
+            } catch (error) {
+                console.error("Error al subir desde móvil:", error);
+                alert("Hubo un error al enviar el comprobante.");
+            }
+        });
+    });
+}
+
+// Configuración de Generación de QR en los modales
+function setupQrGenerator() {
+    const generateQrBtn = document.getElementById('generate-qr-btn');
+    const qrContainer = document.getElementById('qr-code-generator-container');
+    const closeQrGenBtn = document.getElementById('close-qr-gen-btn');
+
+    if (generateQrBtn && qrContainer) {
+        generateQrBtn.addEventListener('click', () => {
+            qrContainer.classList.remove('hidden');
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = '';
+            const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
+            new QRCode(qrcodeDiv, {
+                text: uploadUrl,
+                width: 180,
+                height: 180
+            });
+        });
+    }
+
+    if (closeQrGenBtn && qrContainer) {
+        closeQrGenBtn.addEventListener('click', () => {
+            qrContainer.classList.add('hidden');
+        });
+    }
+
+    const generateCasheaQrBtn = document.getElementById('generate-cashea-qr-btn');
+    const casheaQrContainer = document.getElementById('cashea-qr-container');
+    const closeCasheaQrBtn = document.getElementById('close-cashea-qr-btn');
+
+    if (generateCasheaQrBtn && casheaQrContainer) {
+        generateCasheaQrBtn.addEventListener('click', () => {
+            casheaQrContainer.classList.remove('hidden');
+            const qrcodeDiv = document.getElementById('cashea-qrcode');
+            qrcodeDiv.innerHTML = '';
+            const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
+            new QRCode(qrcodeDiv, {
+                text: uploadUrl,
+                width: 180,
+                height: 180
+            });
+        });
+    }
+
+    if (closeCasheaQrBtn && casheaQrContainer) {
+        closeCasheaQrBtn.addEventListener('click', () => {
+            casheaQrContainer.classList.add('hidden');
+        });
+    }
+}
 
 // Sincronización en tiempo real con Firestore
 function initFirebaseListeners() {
@@ -114,46 +203,6 @@ function setupFilters() {
     }
 }
 
-function setupMobileUploadHandler() {
-    const mobileForm = document.getElementById('mobile-upload-form');
-    if (!mobileForm) return;
-
-    mobileForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const fileInput = document.getElementById('mobile-file');
-
-        if (fileInput.files && fileInput.files[0]) {
-            const reader = new FileReader();
-            reader.onload = async function(event) {
-                const base64Image = event.target.result;
-                const now = new Date();
-                const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-                try {
-                    await addDoc(collection(db, "payments"), {
-                        user: 'Cliente (Vía QR Móvil)',
-                        dni: 'V-00000000',
-                        phone: '04140000000',
-                        method: 'Pago Móvil',
-                        amount: 0.00,
-                        ref: 'QR Móvil',
-                        status: 'Proceso',
-                        datetime: formattedDateTime,
-                        image: base64Image
-                    });
-
-                    mobileForm.classList.add('hidden');
-                    document.getElementById('client-success-msg').classList.remove('hidden');
-                } catch (error) {
-                    console.error("Error al subir comprobante móvil:", error);
-                    showToast('Error al enviar el comprobante', 'error');
-                }
-            };
-            reader.readAsDataURL(fileInput.files[0]);
-        }
-    });
-}
-
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -190,52 +239,6 @@ function setupDniAutocomplete(dniInputId, typeSelectId, nameInputId, phoneInputI
             if (phoneInput && !phoneInput.value) phoneInput.value = match.phone;
         }
     });
-}
-
-function setupQrGeneratorControls() {
-    const setupQRForContainer = (btnId, containerId, elId) => {
-        const generateQrBtn = document.getElementById(btnId);
-        const qrContainer = document.getElementById(containerId);
-        const qrElement = document.getElementById(elId);
-
-        if (generateQrBtn && qrContainer && qrElement) {
-            generateQrBtn.addEventListener('click', () => {
-                qrContainer.classList.remove('hidden');
-                qrElement.innerHTML = ''; 
-
-                const cleanUrl = window.location.href.split('?')[0];
-                const uploadPageUrl = cleanUrl + '?upload=true';
-                
-                new QRCode(qrElement, {
-                    text: uploadPageUrl,
-                    width: 170,
-                    height: 170,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-
-                showToast('QR generado correctamente', 'success');
-            });
-        }
-    };
-
-    setupQRForContainer('generate-qr-btn', 'qr-code-generator-container', 'qrcode');
-    setupQRForContainer('generate-cashea-qr-btn', 'cashea-qr-container', 'cashea-qrcode');
-
-    const closeQrGenBtn = document.getElementById('close-qr-gen-btn');
-    if (closeQrGenBtn) {
-        closeQrGenBtn.addEventListener('click', () => {
-            document.getElementById('qr-code-generator-container').classList.add('hidden');
-        });
-    }
-
-    const closeCasheaQrBtn = document.getElementById('close-cashea-qr-btn');
-    if (closeCasheaQrBtn) {
-        closeCasheaQrBtn.addEventListener('click', () => {
-            document.getElementById('cashea-qr-container').classList.add('hidden');
-        });
-    }
 }
 
 // Elementos de la UI y Navegación
@@ -494,11 +497,9 @@ if (paymentForm) {
 
         const fileInput = paymentFileInput;
         if (fileInput && fileInput.files && fileInput.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(uploadEvent) {
-                savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, uploadEvent.target.result);
-            };
-            reader.readAsDataURL(fileInput.files[0]);
+            compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
+                savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
+            });
         } else {
             let existingImage = '';
             if (editId) {
@@ -508,6 +509,35 @@ if (paymentForm) {
             savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, existingImage);
         }
     });
+}
+
+// Función auxiliar para comprimir imágenes y evitar superar el límite de tamaño de Firestore
+function compressImage(file, maxWidth, quality, callback) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            callback(compressedDataUrl);
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 async function savePaymentData(editId, user, dni, phone, method, status, amount, ref, image) {
