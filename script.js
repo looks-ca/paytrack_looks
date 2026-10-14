@@ -21,9 +21,17 @@ const analytics = getAnalytics(app);
 
 // ==========================================
 // ESTADO Y VARIABLES DE LA APLICACIÓN
+// (7 Tiendas predefinidas + Administrador general)
 // ==========================================
 let users = [
-    { user: 'admin', pass: '1234', role: 'admin' }
+    { user: 'admin', pass: '1234', role: 'admin', store: 'General' },
+    { user: 'acarigua', pass: '1234', role: 'employee', store: 'Acarigua' },
+    { user: 'sanfelipe', pass: '1234', role: 'employee', store: 'San Felipe' },
+    { user: 'metropolis', pass: '1234', role: 'employee', store: 'metropolis-barquisimeto' },
+    { user: 'cabudare', pass: '1234', role: 'employee', store: 'Cabudare' },
+    { user: 'caracas', pass: '1234', role: 'employee', store: 'Caracas' },
+    { user: 'sambil', pass: '1234', role: 'employee', store: 'sambil-barquisimeto' },
+    { user: 'valencia', pass: '1234', role: 'employee', store: 'Valencia' }
 ];
 
 let payments = [];
@@ -456,7 +464,32 @@ if (loginForm) {
             appContainer.classList.remove('hidden');
 
             document.getElementById('user-display').textContent = currentUser.user;
-            showToast(`Bienvenido a Paytrack, ${currentUser.user}`, 'success');
+            document.getElementById('role-display').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Empleado';
+            document.getElementById('store-display').textContent = `Sucursal: ${currentUser.store}`;
+
+            // Restringir navegación visual de admin
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (currentUser.role === 'employee') {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                }
+            });
+
+            // Ocultar selector de tienda en modales si es empleado
+            document.querySelectorAll('.admin-only-field').forEach(el => {
+                if (currentUser.role === 'employee') {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                }
+            });
+
+            if (currentUser.role === 'employee' && (activeTabName === 'conciliacion' || activeTabName === 'summary')) {
+                switchTab(tabHistoryBtn, viewHistory, 'history');
+            }
+
+            showToast(`Bienvenido, ${currentUser.user} (${currentUser.store})`, 'success');
             setupDashboard();
         } else {
             showToast('Usuario o contraseña incorrectos', 'error');
@@ -469,6 +502,8 @@ if (registerForm) {
         e.preventDefault();
         const regUser = document.getElementById('reg-user').value.trim();
         const regPass = document.getElementById('reg-pass').value.trim();
+        const regRole = document.getElementById('reg-role').value;
+        const regStore = document.getElementById('reg-store').value;
 
         const exists = users.some(u => u.user.toLowerCase() === regUser.toLowerCase());
         if (exists) {
@@ -476,8 +511,8 @@ if (registerForm) {
             return;
         }
 
-        users.push({ user: regUser, pass: regPass, role: 'admin' });
-        showToast('Cuenta creada con éxito. ¡Inicia sesión!', 'success');
+        users.push({ user: regUser, pass: regPass, role: regRole, store: regStore });
+        showToast('Sucursal y cuenta creada con éxito. ¡Inicia sesión!', 'success');
         registerForm.reset();
         registerForm.classList.add('hidden');
         loginForm.classList.remove('hidden');
@@ -526,6 +561,12 @@ function openPaymentModalForNew() {
     const statusDiv = document.getElementById('mobile-img-status');
     if (statusDiv) statusDiv.classList.add('hidden');
     document.getElementById('modal-client-dni-type').value = 'V';
+    
+    if (currentUser && currentUser.role === 'employee') {
+        const storeSelect = document.getElementById('modal-payment-store');
+        if (storeSelect) storeSelect.value = currentUser.store;
+    }
+
     paymentModal.classList.remove('hidden');
 }
 
@@ -536,6 +577,7 @@ if (paymentForm) {
     paymentForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const editId = document.getElementById('edit-payment-id').value;
+        const store = currentUser.role === 'employee' ? currentUser.store : document.getElementById('modal-payment-store').value;
         const targetUser = document.getElementById('modal-client-input').value.trim();
         const dniType = document.getElementById('modal-client-dni-type').value;
         const dniNum = document.getElementById('modal-client-dni').value.trim();
@@ -551,11 +593,11 @@ if (paymentForm) {
         const fileInput = paymentFileInput;
 
         if (pendingMobileImage) {
-            savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
+            savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
             pendingMobileImage = null;
         } else if (fileInput && fileInput.files && fileInput.files[0]) {
             compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
-                savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
+                savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
             });
         } else {
             let existingImage = '';
@@ -563,12 +605,11 @@ if (paymentForm) {
                 const existing = payments.find(p => p.idDoc === editId);
                 existingImage = existing ? existing.image : '';
             }
-            savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, existingImage);
+            savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, existingImage);
         }
     });
 }
 
-// Función auxiliar para comprimir imágenes y evitar superar el límite de tamaño de Firestore
 function compressImage(file, maxWidth, quality, callback) {
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -597,22 +638,22 @@ function compressImage(file, maxWidth, quality, callback) {
     reader.readAsDataURL(file);
 }
 
-async function savePaymentData(editId, user, dni, phone, method, status, amount, ref, image) {
+async function savePaymentData(editId, store, user, dni, phone, method, status, amount, ref, image) {
     const now = new Date();
     const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
     try {
         if (editId) {
             const paymentRef = doc(db, "payments", editId);
-            await updateDoc(paymentRef, { user, dni, phone, method, status, amount, ref, image });
+            await updateDoc(paymentRef, { store, user, dni, phone, method, status, amount, ref, image });
             showToast('Pago actualizado en Firebase', 'success');
         } else {
             await addDoc(collection(db, "payments"), {
-                user, dni, phone, method, amount, ref, status,
+                store, user, dni, phone, method, amount, ref, status,
                 datetime: formattedDateTime,
                 image
             });
-            showToast('Pago guardado en Firebase con éxito', 'success');
+            showToast(`Pago guardado para la sucursal [${store}]`, 'success');
         }
         paymentModal.classList.add('hidden');
         paymentForm.reset();
@@ -632,6 +673,7 @@ if (closeUnpaidModalFooterBtn) closeUnpaidModalFooterBtn.addEventListener('click
 if (casheaForm) {
     casheaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const store = currentUser.role === 'employee' ? currentUser.store : document.getElementById('modal-cashea-store').value;
         const orderId = document.getElementById('cashea-order-id').value.trim();
         const user = document.getElementById('cashea-client').value.trim();
         const dniType = document.getElementById('cashea-dni-type').value;
@@ -660,7 +702,7 @@ if (casheaForm) {
 
         try {
             await addDoc(collection(db, "casheaRecords"), {
-                orderId, user, dni, phone, totalAmount, discountPercent, downPaymentPercent,
+                store, orderId, user, dni, phone, totalAmount, discountPercent, downPaymentPercent,
                 paidAmount: clientDownPaymentAmount,
                 totalInstallments,
                 paidInstallments: 0,
@@ -672,7 +714,7 @@ if (casheaForm) {
 
             if (clientDownPaymentAmount > 0) {
                 await addDoc(collection(db, "payments"), {
-                    user, dni, phone,
+                    store, user, dni, phone,
                     method: casheaMethod,
                     amount: clientDownPaymentAmount,
                     ref: `Inicial Ord #${orderId}`,
@@ -685,7 +727,7 @@ if (casheaForm) {
             casheaModal.classList.add('hidden');
             casheaForm.reset();
             document.getElementById('cashea-dni-type').value = 'V';
-            showToast(`Orden Cashea #${orderId} guardada en Firebase`, 'success');
+            showToast(`Orden Cashea #${orderId} guardada para [${store}]`, 'success');
         } catch (error) {
             console.error("Error al registrar orden Cashea:", error);
             showToast('Error al registrar la orden', 'error');
@@ -703,6 +745,11 @@ if (casheaAbonoForm) {
 
         const record = casheaRecords.find(c => c.idDoc === idDoc);
         if (record) {
+            if (currentUser.role === 'employee' && record.store !== currentUser.store) {
+                showToast('No tienes permiso para modificar órdenes de otra tienda', 'error');
+                return;
+            }
+
             const newPaidAmount = record.paidAmount + amount;
             const newPaidInstallments = record.paidInstallments + 1;
             const finalPrice = record.totalAmount * (1 - (record.discountPercent / 100));
@@ -729,6 +776,7 @@ if (casheaAbonoForm) {
                 const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
                 
                 await addDoc(collection(db, "payments"), {
+                    store: record.store,
                     user: record.user,
                     dni: record.dni,
                     phone: record.phone,
@@ -742,7 +790,7 @@ if (casheaAbonoForm) {
 
                 casheaAbonoModal.classList.add('hidden');
                 casheaAbonoForm.reset();
-                showToast('Abono registrado en Firebase', 'success');
+                showToast('Abono registrado con éxito', 'success');
             } catch (error) {
                 console.error("Error al registrar abono:", error);
                 showToast('Error al registrar el abono', 'error');
@@ -753,11 +801,15 @@ if (casheaAbonoForm) {
 
 function exportTableToExcel(filename, tableType) {
     let csv = [];
+    const targetPayments = currentUser.role === 'employee' ? payments.filter(p => p.store === currentUser.store) : payments;
+    const targetCashea = currentUser.role === 'employee' ? casheaRecords.filter(c => c.store === currentUser.store) : casheaRecords;
+
     if (tableType === 'payments') {
-        csv.push(["FechaHora", "Cliente", "Cedula", "Telefono", "Metodo", "Monto", "Referencia", "Estado"].join(";"));
-        payments.forEach(p => {
+        csv.push(["FechaHora", "Tienda", "Cliente", "Cedula", "Telefono", "Metodo", "Monto", "Referencia", "Estado"].join(";"));
+        targetPayments.forEach(p => {
             csv.push([
                 `"${p.datetime || ''}"`,
+                `"${p.store || 'General'}"`,
                 `"${(p.user || '').replace(/"/g, '""')}"`,
                 `"${p.dni || ''}"`,
                 `"${p.phone || ''}"`,
@@ -768,10 +820,11 @@ function exportTableToExcel(filename, tableType) {
             ].join(";"));
         });
     } else if (tableType === 'cashea') {
-        csv.push(["Orden", "FechaHora", "Cliente", "Cedula", "Telefono", "MontoTotal", "DescuentoPct", "InicialPct", "Abonado", "Estado", "Liquidacion"].join(";"));
-        casheaRecords.forEach(c => {
+        csv.push(["Orden", "Tienda", "FechaHora", "Cliente", "Cedula", "Telefono", "MontoTotal", "DescuentoPct", "InicialPct", "Abonado", "Estado", "Liquidacion"].join(";"));
+        targetCashea.forEach(c => {
             csv.push([
                 `"${c.orderId || ''}"`,
+                `"${c.store || 'General'}"`,
                 `"${c.datetime || ''}"`,
                 `"${(c.user || '').replace(/"/g, '""')}"`,
                 `"${c.dni || ''}"`,
@@ -823,6 +876,7 @@ if (verifyOrderBtn) {
 
             container.innerHTML = `
                 <h5 style="color: var(--success); margin-bottom: 8px;"><i class="fa-solid fa-circle-check"></i> Orden Encontrada</h5>
+                <p><strong>Tienda:</strong> ${found.store || 'General'}</p>
                 <p><strong>Cliente:</strong> ${found.user} (${found.dni})</p>
                 <p><strong>Monto Compra Neto:</strong> $${finalPrice.toFixed(2)}</p>
                 <p><strong>Comisión Cashea (7% Semanal):</strong> -$${commission7.toFixed(2)}</p>
@@ -840,12 +894,14 @@ function renderConciliacionView() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (casheaRecords.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No hay órdenes Cashea.</td></tr>`;
+    const targetCashea = currentUser.role === 'employee' ? casheaRecords.filter(c => c.store === currentUser.store) : casheaRecords;
+
+    if (targetCashea.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No hay órdenes Cashea.</td></tr>`;
         return;
     }
 
-    casheaRecords.forEach(c => {
+    targetCashea.forEach(c => {
         const finalPrice = c.totalAmount * (1 - (c.discountPercent / 100));
         const commission7 = finalPrice * 0.07;
         const netReceived = finalPrice - commission7;
@@ -853,6 +909,7 @@ function renderConciliacionView() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>#${c.orderId}</strong></td>
+            <td>${c.store || 'General'}</td>
             <td>${c.user}</td>
             <td>$${finalPrice.toFixed(2)}</td>
             <td style="color: var(--danger);">-$${commission7.toFixed(2)}</td>
@@ -879,6 +936,10 @@ function renderTable() {
     const filterDate = document.getElementById('filter-date-input') ? document.getElementById('filter-date-input').value : '';
 
     const filteredPayments = payments.filter(p => {
+        if (currentUser.role === 'employee' && p.store !== currentUser.store) {
+            return false;
+        }
+
         const matchesSearch = !searchQuery || 
             (p.user && p.user.toLowerCase().includes(searchQuery)) ||
             (p.dni && p.dni.toLowerCase().includes(searchQuery)) ||
@@ -891,7 +952,7 @@ function renderTable() {
     });
 
     if (filteredPayments.length === 0) {
-        paymentTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No se encontraron transacciones.</td></tr>`;
+        paymentTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center;">No se encontraron transacciones.</td></tr>`;
         return;
     }
     
@@ -899,6 +960,7 @@ function renderTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="date-cell">${p.datetime || 'N/A'}</td>
+            <td><span class="badge" style="background: rgba(99,102,241,0.1); color: var(--primary);">${p.store || 'General'}</span></td>
             <td><strong>${p.user}</strong></td>
             <td>${p.dni || 'N/A'}</td>
             <td>${p.phone || 'N/A'}</td>
@@ -923,7 +985,17 @@ function renderCasheaTable() {
     if (!casheaTableBody) return;
     casheaTableBody.innerHTML = '';
 
-    casheaRecords.forEach(c => {
+    const targetCashea = casheaRecords.filter(c => {
+        if (currentUser.role === 'employee' && c.store !== currentUser.store) return false;
+        return true;
+    });
+
+    if (targetCashea.length === 0) {
+        casheaTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay órdenes Cashea para esta tienda.</td></tr>`;
+        return;
+    }
+
+    targetCashea.forEach(c => {
         const finalPrice = c.totalAmount * (1 - (c.discountPercent / 100));
         const clientInitialAmount = finalPrice * (c.downPaymentPercent / 100);
         const remaining = finalPrice - c.paidAmount;
@@ -932,6 +1004,7 @@ function renderCasheaTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>#${c.orderId}</strong></td>
+            <td><span class="badge" style="background: rgba(99,102,241,0.1); color: var(--primary);">${c.store || 'General'}</span></td>
             <td>${c.user}</td>
             <td>${c.dni}<br><small>${c.phone}</small></td>
             <td>$${c.totalAmount.toFixed(2)}</td>
@@ -956,7 +1029,10 @@ function renderMetrics() {
     const startDate = document.getElementById('metrics-start-date') ? document.getElementById('metrics-start-date').value : '';
     const endDate = document.getElementById('metrics-end-date') ? document.getElementById('metrics-end-date').value : '';
 
-    const filteredPayments = payments.filter(p => {
+    const targetPayments = currentUser.role === 'employee' ? payments.filter(p => p.store === currentUser.store) : payments;
+    const targetCashea = currentUser.role === 'employee' ? casheaRecords.filter(c => c.store === currentUser.store) : casheaRecords;
+
+    const filteredPayments = targetPayments.filter(p => {
         if (!p.datetime) return true;
         const pDate = p.datetime.split(' ')[0];
         if (startDate && pDate < startDate) return false;
@@ -985,7 +1061,7 @@ function renderMetrics() {
     let transitTotal = 0;
     let collectedCashea = 0;
 
-    casheaRecords.forEach(c => {
+    targetCashea.forEach(c => {
         const finalPrice = c.totalAmount * (1 - (c.discountPercent / 100));
         const remaining = finalPrice - c.paidAmount;
 
@@ -1027,10 +1103,10 @@ function renderMetrics() {
     document.getElementById('top-payer-container').textContent = topPayer;
     document.getElementById('top-buyer-container').textContent = topBuyer;
 
-    renderCharts(filteredPayments);
+    renderCharts(filteredPayments, targetCashea);
 }
 
-function renderCharts(activePayments) {
+function renderCharts(activePayments, activeCashea) {
     const ctxMethods = document.getElementById('paymentMethodsChart');
     if (ctxMethods) {
         if (chartsInstance.methods) chartsInstance.methods.destroy();
@@ -1064,8 +1140,8 @@ function renderCharts(activePayments) {
     if (ctxCashea) {
         if (chartsInstance.cashea) chartsInstance.cashea.destroy();
 
-        let inTransit = casheaRecords.filter(c => c.settlementStatus === 'En Tránsito').length;
-        let liquidated = casheaRecords.filter(c => c.settlementStatus === 'Liquidado').length;
+        let inTransit = activeCashea.filter(c => c.settlementStatus === 'En Tránsito').length;
+        let liquidated = activeCashea.filter(c => c.settlementStatus === 'Liquidado').length;
 
         chartsInstance.cashea = new Chart(ctxCashea, {
             type: 'doughnut',
@@ -1093,10 +1169,18 @@ window.openEditPayment = function(idDoc) {
     const p = payments.find(item => item.idDoc === idDoc);
     if (!p) return;
 
+    if (currentUser.role === 'employee' && p.store !== currentUser.store) {
+        showToast('No puedes editar pagos de otra tienda', 'error');
+        return;
+    }
+
     document.getElementById('payment-modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Pago';
     document.getElementById('edit-payment-id').value = p.idDoc;
     document.getElementById('modal-client-input').value = p.user || '';
     document.getElementById('modal-client-phone').value = p.phone || '';
+
+    const storeSelect = document.getElementById('modal-payment-store');
+    if (storeSelect) storeSelect.value = p.store || 'Caracas';
 
     if (p.dni && p.dni.includes('-')) {
         const parts = p.dni.split('-');
@@ -1114,6 +1198,12 @@ window.openEditPayment = function(idDoc) {
 };
 
 window.deletePayment = function(idDoc) {
+    const p = payments.find(item => item.idDoc === idDoc);
+    if (currentUser.role === 'employee' && p && p.store !== currentUser.store) {
+        showToast('No puedes eliminar pagos de otra tienda', 'error');
+        return;
+    }
+
     showConfirmModal('¿Estás seguro de eliminar este pago de Firebase?', async () => {
         try {
             await deleteDoc(doc(db, "payments", idDoc));
@@ -1126,6 +1216,12 @@ window.deletePayment = function(idDoc) {
 };
 
 window.deleteCashea = function(idDoc) {
+    const c = casheaRecords.find(item => item.idDoc === idDoc);
+    if (currentUser.role === 'employee' && c && c.store !== currentUser.store) {
+        showToast('No puedes eliminar órdenes de otra tienda', 'error');
+        return;
+    }
+
     showConfirmModal('¿Estás seguro de eliminar este registro Cashea?', async () => {
         try {
             await deleteDoc(doc(db, "casheaRecords", idDoc));
@@ -1140,6 +1236,11 @@ window.deleteCashea = function(idDoc) {
 window.openAbonoModal = function(idDoc) {
     const record = casheaRecords.find(c => c.idDoc === idDoc);
     if (!record) return;
+
+    if (currentUser.role === 'employee' && record.store !== currentUser.store) {
+        showToast('No puedes abonar a órdenes de otra tienda', 'error');
+        return;
+    }
 
     document.getElementById('abono-cashea-id').value = record.idDoc;
     document.getElementById('abono-client-name').value = `${record.user} (Orden #${record.orderId})`;
@@ -1158,13 +1259,17 @@ function renderUnpaidList() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const unpaid = casheaRecords.filter(c => c.status !== 'Pagado');
-    if (unpaid.length === 0) {
+    const targetCashea = casheaRecords.filter(c => {
+        if (currentUser.role === 'employee' && c.store !== currentUser.store) return false;
+        return c.status !== 'Pagado';
+    });
+
+    if (targetCashea.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay deudores pendientes 🎉</td></tr>`;
         return;
     }
 
-    unpaid.forEach(c => {
+    targetCashea.forEach(c => {
         const finalPrice = c.totalAmount * (1 - (c.discountPercent / 100));
         const remaining = finalPrice - c.paidAmount;
 

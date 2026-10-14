@@ -59,9 +59,9 @@
 
         <main class="landing-hero">
             <div class="hero-content">
-                <span class="badge-pill"><i class="fa-solid fa-shield-halved"></i> Control Financiero & Cashea</span>
+                <span class="badge-pill"><i class="fa-solid fa-shield-halved"></i> Control Financiero & Cashea - Multitienda</span>
                 <h2>Administra tus pagos, créditos y caja de forma inteligente</h2>
-                <p>Control absoluto de tus transacciones, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones en la nube.</p>
+                <p>Control absoluto de tus sucursales, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones en la nube.</p>
                 <div class="hero-buttons">
                     <button id="hero-get-started" class="btn btn-primary btn-lg">Comenzar Gratis <i class="fa-solid fa-rocket"></i></button>
                 </div>
@@ -102,7 +102,7 @@
                 </div>
                 <div class="form-group">
                     <label><i class="fa-solid fa-user"></i> Usuario</label>
-                    <input type="text" id="login-user" required placeholder="Ej: admin">
+                    <input type="text" id="login-user" required placeholder="Ej: caracas">
                 </div>
                 <div class="form-group">
                     <label><i class="fa-solid fa-lock"></i> Contraseña</label>
@@ -119,11 +119,30 @@
                 </div>
                 <div class="form-group">
                     <label><i class="fa-solid fa-user-plus"></i> Nuevo Usuario</label>
-                    <input type="text" id="reg-user" required placeholder="Ej: usuario1">
+                    <input type="text" id="reg-user" required placeholder="Ej: empleado_nuevo">
                 </div>
                 <div class="form-group">
                     <label><i class="fa-solid fa-lock"></i> Contraseña</label>
                     <input type="password" id="reg-pass" required placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user-shield"></i> Rol</label>
+                    <select id="reg-role" required>
+                        <option value="admin">Administrador</option>
+                        <option value="employee" selected>Empleado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-store"></i> Tienda / Sucursal</label>
+                    <select id="reg-store" required>
+                        <option value="Caracas">Caracas</option>
+                        <option value="Cabudare">Cabudare</option>
+                        <option value="Acarigua">Acarigua</option>
+                        <option value="San Felipe">San Felipe</option>
+                        <option value="metropolis-barquisimeto">Metropolis Barquisimeto</option>
+                        <option value="sambil-barquisimeto">Sambil Barquisimeto</option>
+                        <option value="Valencia">Valencia</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-user-check"></i> Registrarse</button>
                 <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
@@ -143,15 +162,16 @@
             <div class="sidebar-user-info">
                 <span class="user-avatar"><i class="fa-solid fa-circle-user"></i></span>
                 <div>
-                    <span class="user-role">Administrador</span>
+                    <span id="role-display" class="user-role">Administrador</span>
                     <strong id="user-display">Usuario</strong>
+                    <span id="store-display" style="font-size: 0.7rem; color: var(--primary); display: block;">Tienda</span>
                 </div>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" id="tab-history-btn" class="nav-item active"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Pagos</a>
                 <a href="#" id="tab-cashea-btn" class="nav-item"><i class="fa-solid fa-credit-card"></i> Módulo Cashea</a>
-                <a href="#" id="tab-conciliacion-btn" class="nav-item"><i class="fa-solid fa-file-invoice-dollar"></i> Conciliación de Órdenes</a>
-                <a href="#" id="tab-summary-btn" class="nav-item"><i class="fa-solid fa-chart-pie"></i> Resumen & Métricas</a>
+                <a href="#" id="tab-conciliacion-btn" class="nav-item admin-only"><i class="fa-solid fa-file-invoice-dollar"></i> Conciliación de Órdenes</a>
+                <a href="#" id="tab-summary-btn" class="nav-item admin-only"><i class="fa-solid fa-chart-pie"></i> Resumen & Métricas</a>
             </nav>
             <div class="sidebar-footer">
                 <button id="logout-btn" class="btn btn-outline-danger btn-block" style="margin-bottom: 15px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
@@ -204,6 +224,7 @@
                                 <thead>
                                     <tr>
                                         <th>Fecha / Hora</th>
+                                        <th>Tienda</th>
                                         <th>Cliente</th>
                                         <th>Cédula</th>
                                         <th>Teléfono</th>
@@ -236,6 +257,7 @@
                                 <thead>
                                     <tr>
                                         <th>N° Orden</th>
+                                        <th>Tienda</th>
                                         <th>Cliente</th>
                                         <th>Cédula / Telf</th>
                                         <th>Monto Total</th>
@@ -272,7 +294,7 @@
                         <div class="table-responsive">
                             <table class="data-table">
                                 <thead>
-                                    <tr><th>N° Orden</th><th>Cliente</th><th>Monto Compra</th><th>Comisión 7% Semanal</th><th>Neto a Recibir</th><th>Estado</th></tr>
+                                    <tr><th>N° Orden</th><th>Tienda</th><th>Cliente</th><th>Monto Compra</th><th>Comisión 7% Semanal</th><th>Neto a Recibir</th><th>Estado</th></tr>
                                 </thead>
                                 <tbody id="conciliacion-table-body"></tbody>
                             </table>
@@ -346,6 +368,21 @@
             </div>
             <form id="payment-form">
                 <input type="hidden" id="edit-payment-id">
+                
+                <!-- Selector de Tienda (Visible solo para administradores) -->
+                <div class="form-group admin-only-field">
+                    <label><i class="fa-solid fa-store"></i> Tienda de Registro</label>
+                    <select id="modal-payment-store" required>
+                        <option value="Caracas">Caracas</option>
+                        <option value="Cabudare">Cabudare</option>
+                        <option value="Acarigua">Acarigua</option>
+                        <option value="San Felipe">San Felipe</option>
+                        <option value="metropolis-barquisimeto">Metropolis Barquisimeto</option>
+                        <option value="sambil-barquisimeto">Sambil Barquisimeto</option>
+                        <option value="Valencia">Valencia</option>
+                    </select>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label><i class="fa-solid fa-id-card"></i> Cédula de Identidad</label>
@@ -408,6 +445,20 @@
         <div class="modal-content card">
             <div class="modal-header"><h3><i class="fa-solid fa-credit-card"></i> Nueva Orden Cashea</h3><button id="close-cashea-modal-btn" class="close-btn">&times;</button></div>
             <form id="cashea-form">
+                <!-- Selector de Tienda (Visible solo para administradores) -->
+                <div class="form-group admin-only-field">
+                    <label><i class="fa-solid fa-store"></i> Tienda de Registro</label>
+                    <select id="modal-cashea-store" required>
+                        <option value="Caracas">Caracas</option>
+                        <option value="Cabudare">Cabudare</option>
+                        <option value="Acarigua">Acarigua</option>
+                        <option value="San Felipe">San Felipe</option>
+                        <option value="metropolis-barquisimeto">Metropolis Barquisimeto</option>
+                        <option value="sambil-barquisimeto">Sambil Barquisimeto</option>
+                        <option value="Valencia">Valencia</option>
+                    </select>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group"><label><i class="fa-solid fa-hashtag"></i> N° de Orden Cashea</label><input type="text" id="cashea-order-id" required placeholder="Ej: CSH-1025"></div>
                     <div class="form-group">
