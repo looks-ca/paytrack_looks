@@ -12,14 +12,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="icon" type="image/png" href="paytrack.png">
-    
 </head>
 <body>
 
     <div id="toast-container"></div>
 
-    <!-- VISTA MÓVIL SIMPLIFICADA PARA CLIENTES (?upload=true) -->
+    <!-- VISTA MÓVIL SIMPLIFICADA PARA CLIENTES (?upload=true&peer=...) -->
     <div id="client-upload-page" class="hidden" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
         <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
             <h2 style="margin-bottom: 10px;"><i class="fa-solid fa-cloud-arrow-up"></i> Subir Comprobante</h2>
@@ -30,8 +31,12 @@
                     <label><i class="fa-solid fa-image"></i> Foto del Comprobante</label>
                     <input type="file" id="mobile-file" accept="image/*" capture="environment" required style="padding: 15px; background: var(--bg-main); border: 2px dashed var(--primary); border-radius: 8px; cursor: pointer; width: 100%;">
                 </div>
-                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Enviar Comprobante <i class="fa-solid fa-rocket"></i></button>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Enviar a la PC <i class="fa-solid fa-rocket"></i></button>
             </form>
+
+            <div id="client-loading-msg" class="hidden" style="margin-top: 20px; color: var(--warning); font-weight: bold;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Conectando y enviando foto a la PC...
+            </div>
 
             <div id="client-success-msg" class="hidden" style="margin-top: 20px; color: var(--success); font-weight: bold;">
                 <i class="fa-solid fa-circle-check"></i> ¡Comprobante enviado con éxito! Ya puedes cerrar esta ventana.
@@ -377,9 +382,8 @@
                 <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                     <label><i class="fa-solid fa-file-arrow-up"></i> Comprobante de Pago</label>
                     
-                    <!-- Indicador visual si el celular ya envió la foto -->
                     <div id="mobile-img-status" class="hidden" style="margin-bottom: 10px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: 6px; color: var(--success); font-size: 0.85rem;">
-                        <i class="fa-solid fa-circle-check"></i> ¡Foto recibida desde el celular correctamente! Lista para guardar.
+                        <i class="fa-solid fa-circle-check"></i> ¡Foto recibida directamente desde el celular por PeerJS! Lista para guardar.
                     </div>
 
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
@@ -389,7 +393,7 @@
 
                     <div id="qr-code-generator-container" class="hidden" style="margin-top: 15px; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--primary);">
                         <div id="qrcode" style="display: inline-block; padding: 10px; background: #fff; border-radius: 6px;"></div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con tu teléfono para subir la foto directo desde la cámara</p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con tu teléfono para conectar P2P y enviar la foto</p>
                         <button type="button" id="close-qr-gen-btn" class="btn btn-outline-danger" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Ocultar QR</button>
                     </div>
                 </div>

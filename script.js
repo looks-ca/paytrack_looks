@@ -33,9 +33,10 @@ let currentUser = null;
 let pendingDeleteCallback = null;
 let activeTabName = 'history';
 let chartsInstance = { methods: null, cashea: null };
-let pendingMobileImage = null; // Variable para almacenar temporalmente la imagen enviada por el celular
+let pendingMobileImage = null; // Imagen recibida vía PeerJS
 
-const paymentChannel = new BroadcastChannel('paytrack_qr_channel');
+let pcPeer = null;
+let currentPeerId = null;
 
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -58,14 +59,14 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', toggleTheme);
     });
 
-    // Detectar si estamos en modo de subida móvil por QR (?upload=true)
+    // Detectar si estamos en modo de subida móvil por QR (?upload=true&peer=...)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('upload') === 'true') {
         const landing = document.getElementById('landing-container');
         const uploadPage = document.getElementById('client-upload-page');
         if (landing) landing.classList.add('hidden');
         if (uploadPage) uploadPage.classList.remove('hidden');
-        setupMobileUploadHandler();
+        setupMobilePeerUpload(urlParams.get('peer'));
         return;
     }
 
@@ -76,8 +77,34 @@ window.addEventListener('DOMContentLoaded', () => {
     initFirebaseListeners();
 });
 
-// Lógica exclusiva para la subida móvil mediante QR (envía por internet a la PC sin crear registro en DB)
-function setupMobileUploadHandler() {
+// Inicializar PeerJS en la PC para recibir la foto del celular directamente
+function initPcPeer() {
+    if (pcPeer) return; // Ya está activo
+
+    pcPeer = new Peer(); // Genera un ID aleatorio en los servidores públicos de PeerJS
+
+    pcPeer.on('open', (id) => {
+        currentPeerId = id;
+    });
+
+    pcPeer.on('connection', (conn) => {
+        conn.on('data', (data) => {
+            if (data && data.type === 'RECEIPT_IMAGE') {
+                pendingMobileImage = data.image;
+                showToast('¡Comprobante recibido del celular por PeerJS!', 'success');
+
+                const statusDiv = document.getElementById('mobile-img-status');
+                if (statusDiv) statusDiv.classList.remove('hidden');
+
+                const qrContainer = document.getElementById('qr-code-generator-container');
+                if (qrContainer) qrContainer.classList.add('hidden');
+            }
+        });
+    });
+}
+
+// Lógica del cel cuando escanea el QR y envía la foto vía PeerJS a la PC
+function setupMobilePeerUpload(pcPeerId) {
     const form = document.getElementById('mobile-upload-form');
     if (!form) return;
 
@@ -86,34 +113,38 @@ function setupMobileUploadHandler() {
         const fileInput = document.getElementById('mobile-file');
         if (!fileInput || !fileInput.files[0]) return;
 
-        compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
-            // Transmitir la imagen en tiempo real a la PC del administrador
-            paymentChannel.postMessage({
-                type: 'RECEIPT_UPLOADED',
-                image: compressedBase64
-            });
+        form.classList.add('hidden');
+        document.getElementById('client-loading-msg').classList.remove('hidden');
 
-            form.classList.add('hidden');
-            document.getElementById('client-success-msg').classList.remove('hidden');
+        compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
+            const mobilePeer = new Peer();
+
+            mobilePeer.on('open', () => {
+                const conn = mobilePeer.connect(pcPeerId);
+
+                conn.on('open', () => {
+                    // Enviar imagen directamente a la PC por internet (P2P)
+                    conn.send({
+                        type: 'RECEIPT_IMAGE',
+                        image: compressedBase64
+                    });
+
+                    document.getElementById('client-loading-msg').classList.add('hidden');
+                    document.getElementById('client-success-msg').classList.remove('hidden');
+                });
+
+                conn.on('error', (err) => {
+                    console.error("Error PeerJS conexión:", err);
+                    alert("No se pudo conectar directamente con la PC. Intenta de nuevo.");
+                    document.getElementById('client-loading-msg').classList.add('hidden');
+                    form.classList.remove('hidden');
+                });
+            });
         });
     });
 }
 
-// Escuchar la imagen enviada desde el celular en tiempo real
-paymentChannel.onmessage = (event) => {
-    if (event.data && event.data.type === 'RECEIPT_UPLOADED') {
-        pendingMobileImage = event.data.image;
-        showToast('¡Comprobante recibido desde el celular!', 'success');
-        
-        const statusDiv = document.getElementById('mobile-img-status');
-        if (statusDiv) statusDiv.classList.remove('hidden');
-
-        const qrContainer = document.getElementById('qr-code-generator-container');
-        if (qrContainer) qrContainer.classList.add('hidden');
-    }
-};
-
-// Configuración de Generación de QR en los modales
+// Configuración de Generación de QR con PeerJS
 function setupQrGenerator() {
     const generateQrBtn = document.getElementById('generate-qr-btn');
     const qrContainer = document.getElementById('qr-code-generator-container');
@@ -121,15 +152,23 @@ function setupQrGenerator() {
 
     if (generateQrBtn && qrContainer) {
         generateQrBtn.addEventListener('click', () => {
-            qrContainer.classList.remove('hidden');
-            const qrcodeDiv = document.getElementById('qrcode');
-            qrcodeDiv.innerHTML = '';
-            const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
-            new QRCode(qrcodeDiv, {
-                text: uploadUrl,
-                width: 160,
-                height: 160
-            });
+            initPcPeer(); // Iniciar servidor Peer de la PC
+
+            const checkPeerReady = setInterval(() => {
+                if (currentPeerId) {
+                    clearInterval(checkPeerReady);
+                    qrContainer.classList.remove('hidden');
+                    const qrcodeDiv = document.getElementById('qrcode');
+                    qrcodeDiv.innerHTML = '';
+                    
+                    const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true&peer=${currentPeerId}`;
+                    new QRCode(qrcodeDiv, {
+                        text: uploadUrl,
+                        width: 160,
+                        height: 160
+                    });
+                }
+            }, 200);
         });
     }
 
@@ -145,15 +184,23 @@ function setupQrGenerator() {
 
     if (generateCasheaQrBtn && casheaQrContainer) {
         generateCasheaQrBtn.addEventListener('click', () => {
-            casheaQrContainer.classList.remove('hidden');
-            const qrcodeDiv = document.getElementById('cashea-qrcode');
-            qrcodeDiv.innerHTML = '';
-            const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
-            new QRCode(qrcodeDiv, {
-                text: uploadUrl,
-                width: 160,
-                height: 160
-            });
+            initPcPeer();
+
+            const checkPeerReady = setInterval(() => {
+                if (currentPeerId) {
+                    clearInterval(checkPeerReady);
+                    casheaQrContainer.classList.remove('hidden');
+                    const qrcodeDiv = document.getElementById('cashea-qrcode');
+                    qrcodeDiv.innerHTML = '';
+                    
+                    const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true&peer=${currentPeerId}`;
+                    new QRCode(qrcodeDiv, {
+                        text: uploadUrl,
+                        width: 160,
+                        height: 160
+                    });
+                }
+            }, 200);
         });
     }
 
@@ -475,7 +522,7 @@ function openPaymentModalForNew() {
     document.getElementById('payment-modal-title').innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i> Registrar Nuevo Pago';
     document.getElementById('edit-payment-id').value = '';
     paymentForm.reset();
-    pendingMobileImage = null; // Reiniciar imagen móvil pendiente
+    pendingMobileImage = null;
     const statusDiv = document.getElementById('mobile-img-status');
     if (statusDiv) statusDiv.classList.add('hidden');
     document.getElementById('modal-client-dni-type').value = 'V';
@@ -503,7 +550,6 @@ if (paymentForm) {
 
         const fileInput = paymentFileInput;
 
-        // Si se recibió una foto vía QR/Móvil, usarla prioritariamente
         if (pendingMobileImage) {
             savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
             pendingMobileImage = null;
