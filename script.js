@@ -33,6 +33,9 @@ let currentUser = null;
 let pendingDeleteCallback = null;
 let activeTabName = 'history';
 let chartsInstance = { methods: null, cashea: null };
+let pendingMobileImage = null; // Variable para almacenar temporalmente la imagen enviada por el celular
+
+const paymentChannel = new BroadcastChannel('paytrack_qr_channel');
 
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -73,42 +76,42 @@ window.addEventListener('DOMContentLoaded', () => {
     initFirebaseListeners();
 });
 
-// Lógica exclusiva para la subida móvil mediante QR
+// Lógica exclusiva para la subida móvil mediante QR (envía por internet a la PC sin crear registro en DB)
 function setupMobileUploadHandler() {
     const form = document.getElementById('mobile-upload-form');
     if (!form) return;
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
         const fileInput = document.getElementById('mobile-file');
         if (!fileInput || !fileInput.files[0]) return;
 
-        compressImage(fileInput.files[0], 800, 0.7, async (compressedBase64) => {
-            try {
-                const now = new Date();
-                const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
+            // Transmitir la imagen en tiempo real a la PC del administrador
+            paymentChannel.postMessage({
+                type: 'RECEIPT_UPLOADED',
+                image: compressedBase64
+            });
 
-                await addDoc(collection(db, "payments"), {
-                    user: "Cliente Móvil (QR)",
-                    dni: "V-N/D",
-                    phone: "N/D",
-                    method: "Pago Móvil",
-                    amount: 0.00,
-                    ref: "Subida por QR Móvil",
-                    status: "Proceso",
-                    datetime: formattedDateTime,
-                    image: compressedBase64
-                });
-
-                form.classList.add('hidden');
-                document.getElementById('client-success-msg').classList.remove('hidden');
-            } catch (error) {
-                console.error("Error al subir desde móvil:", error);
-                alert("Hubo un error al enviar el comprobante.");
-            }
+            form.classList.add('hidden');
+            document.getElementById('client-success-msg').classList.remove('hidden');
         });
     });
 }
+
+// Escuchar la imagen enviada desde el celular en tiempo real
+paymentChannel.onmessage = (event) => {
+    if (event.data && event.data.type === 'RECEIPT_UPLOADED') {
+        pendingMobileImage = event.data.image;
+        showToast('¡Comprobante recibido desde el celular!', 'success');
+        
+        const statusDiv = document.getElementById('mobile-img-status');
+        if (statusDiv) statusDiv.classList.remove('hidden');
+
+        const qrContainer = document.getElementById('qr-code-generator-container');
+        if (qrContainer) qrContainer.classList.add('hidden');
+    }
+};
 
 // Configuración de Generación de QR en los modales
 function setupQrGenerator() {
@@ -472,6 +475,9 @@ function openPaymentModalForNew() {
     document.getElementById('payment-modal-title').innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i> Registrar Nuevo Pago';
     document.getElementById('edit-payment-id').value = '';
     paymentForm.reset();
+    pendingMobileImage = null; // Reiniciar imagen móvil pendiente
+    const statusDiv = document.getElementById('mobile-img-status');
+    if (statusDiv) statusDiv.classList.add('hidden');
     document.getElementById('modal-client-dni-type').value = 'V';
     paymentModal.classList.remove('hidden');
 }
@@ -496,7 +502,12 @@ if (paymentForm) {
         const ref = row.querySelector('.pay-ref').value;
 
         const fileInput = paymentFileInput;
-        if (fileInput && fileInput.files && fileInput.files[0]) {
+
+        // Si se recibió una foto vía QR/Móvil, usarla prioritariamente
+        if (pendingMobileImage) {
+            savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
+            pendingMobileImage = null;
+        } else if (fileInput && fileInput.files && fileInput.files[0]) {
             compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
                 savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
             });

@@ -376,6 +376,12 @@
 
                 <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                     <label><i class="fa-solid fa-file-arrow-up"></i> Comprobante de Pago</label>
+                    
+                    <!-- Indicador visual si el celular ya envió la foto -->
+                    <div id="mobile-img-status" class="hidden" style="margin-bottom: 10px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); border-radius: 6px; color: var(--success); font-size: 0.85rem;">
+                        <i class="fa-solid fa-circle-check"></i> ¡Foto recibida desde el celular correctamente! Lista para guardar.
+                    </div>
+
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
                         <input type="file" id="payment-file-input" accept="image/*" capture="environment" style="flex: 1;">
                         <button type="button" id="generate-qr-btn" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-qrcode"></i> Generar QR para el Celular</button>
