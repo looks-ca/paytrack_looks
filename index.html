@@ -375,16 +375,16 @@
                 </div>
 
                 <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                    <label><i class="fa-solid fa-file-arrow-up"></i> Comprobante de Pago o Generar QR para el Celular</label>
+                    <label><i class="fa-solid fa-file-arrow-up"></i> Comprobante de Pago</label>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
                         <input type="file" id="payment-file-input" accept="image/*" capture="environment" style="flex: 1;">
-                        <button type="button" id="generate-qr-btn" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-qrcode"></i> Generar QR para Subida Móvil</button>
+                        <button type="button" id="generate-qr-btn" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-qrcode"></i> Generar QR para el Celular</button>
                     </div>
 
-                    <div id="qr-code-generator-container" class="hidden" style="margin-top: 10px; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                    <div id="qr-code-generator-container" class="hidden" style="margin-top: 15px; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--primary);">
                         <div id="qrcode" style="display: inline-block; padding: 10px; background: #fff; border-radius: 6px;"></div>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con el celular para enviar tu comprobante</p>
-                        <button type="button" id="close-qr-gen-btn" class="btn btn-outline-danger" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cerrar QR</button>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con tu teléfono para subir la foto directo desde la cámara</p>
+                        <button type="button" id="close-qr-gen-btn" class="btn btn-outline-danger" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Ocultar QR</button>
                     </div>
                 </div>
 

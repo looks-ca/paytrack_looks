@@ -124,8 +124,8 @@ function setupQrGenerator() {
             const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
             new QRCode(qrcodeDiv, {
                 text: uploadUrl,
-                width: 180,
-                height: 180
+                width: 160,
+                height: 160
             });
         });
     }
@@ -148,8 +148,8 @@ function setupQrGenerator() {
             const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true`;
             new QRCode(qrcodeDiv, {
                 text: uploadUrl,
-                width: 180,
-                height: 180
+                width: 160,
+                height: 160
             });
         });
     }
