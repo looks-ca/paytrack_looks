@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paytrack</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome 6.4.0 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <!-- VISTA MÓVIL SIMPLIFICADA PARA CLIENTES (?upload=true) -->
+    <div id="client-upload-page" class="hidden" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 10px;"><i class="fa-solid fa-cloud-arrow-up"></i> Subir Comprobante</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Toma o selecciona la foto de tu comprobante de pago.</p>
+            
+            <form id="mobile-upload-form">
+                <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+                    <label><i class="fa-solid fa-image"></i> Foto del Comprobante</label>
+                    <input type="file" id="mobile-file" accept="image/*" capture="environment" required style="padding: 15px; background: var(--bg-main); border: 2px dashed var(--primary); border-radius: 8px; cursor: pointer; width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Enviar Comprobante <i class="fa-solid fa-rocket"></i></button>
+            </form>
+
+            <div id="client-success-msg" class="hidden" style="margin-top: 20px; color: var(--success); font-weight: bold;">
+                <i class="fa-solid fa-circle-check"></i> ¡Comprobante enviado con éxito! Ya puedes cerrar esta ventana.
+            </div>
+        </div>
+    </div>
+
+    <!-- LANDING PAGE -->
+    <div id="landing-container" class="landing-page">
+        <header class="landing-header">
+            <div class="landing-logo">
+                <img src="paytrack.png" alt="Paytrack Logo" class="brand-logo-img" onerror="this.style.display='none'">
+            </div>
+            <div class="landing-nav-actions">
+                <button class="btn btn-outline btn-theme" title="Cambiar Tema"><i class="fa-solid fa-moon"></i></button>
+                <button id="nav-login-btn" class="btn btn-outline"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
+                <button id="nav-register-btn" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Registrarse</button>
+            </div>
+        </header>
+
+        <main class="landing-hero">
+            <div class="hero-content">
+                <span class="badge-pill"><i class="fa-solid fa-shield-halved"></i> Control Financiero & Cashea</span>
+                <h2>Administra tus pagos, créditos y caja de forma inteligente</h2>
+                <p>Control absoluto de tus transacciones, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones.</p>
+                <div class="hero-buttons">
+                    <button id="hero-get-started" class="btn btn-primary btn-lg">Comenzar Gratis <i class="fa-solid fa-rocket"></i></button>
+                </div>
+            </div>
+            <div class="hero-image-mockup">
+                <div class="mockup-window">
+                    <div class="mockup-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="mockup-card">
+                            <span><i class="fa-solid fa-vault"></i> Ingresos Totales Caja</span>
+                            <h3>$1,420.00</h3>
+                        </div>
+                        <div class="mockup-card">
+                            <span><i class="fa-solid fa-percent"></i> Comisión Cashea (7%)</span>
+                            <h3>$98.50</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-color);">
+            Paytrack® - Todos los derechos reservados
+        </footer>
+    </div>
+
+    <!-- AUTENTICACIÓN -->
+    <div id="auth-container" class="auth-container hidden">
+        <div class="auth-card card">
+            <button id="back-to-landing" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+            <form id="login-form" class="auth-form">
+                <div class="auth-card-header" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <img src="paytrack.png" alt="Paytrack" class="auth-logo-img" onerror="this.style.display='none'">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user"></i> Usuario</label>
+                    <input type="text" id="login-user" required placeholder="Ej: admin">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="login-pass" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+                <p class="auth-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate aquí</a></p>
+                <div style="text-align: center; margin-top: 25px; font-size: 0.75rem; color: var(--text-muted);">Paytrack® v1.0</div>
+            </form>
+
+            <form id="register-form" class="auth-form hidden">
+                <div class="auth-card-header" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <img src="paytrack.png" alt="Paytrack" class="auth-logo-img" onerror="this.style.display='none'">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user-plus"></i> Nuevo Usuario</label>
+                    <input type="text" id="reg-user" required placeholder="Ej: usuario1">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="reg-pass" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-user-check"></i> Registrarse</button>
+                <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
+                <div style="text-align: center; margin-top: 25px; font-size: 0.75rem; color: var(--text-muted);">Paytrack® v1.0</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL -->
+    <div id="app-container" class="app-container hidden">
+        <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
+
+        <aside id="app-sidebar" class="sidebar">
+            <div class="sidebar-header" style="display: flex; justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                <img src="paytrack.png" alt="Paytrack" class="sidebar-logo-img" onerror="this.style.display='none'">
+            </div>
+            <div class="sidebar-user-info">
+                <span class="user-avatar"><i class="fa-solid fa-circle-user"></i></span>
+                <div>
+                    <span class="user-role">Administrador</span>
+                    <strong id="user-display">Usuario</strong>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" id="tab-history-btn" class="nav-item active"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Pagos</a>
+                <a href="#" id="tab-cashea-btn" class="nav-item"><i class="fa-solid fa-credit-card"></i> Módulo Cashea</a>
+                <a href="#" id="tab-conciliacion-btn" class="nav-item"><i class="fa-solid fa-file-invoice-dollar"></i> Conciliación de Órdenes</a>
+                <a href="#" id="tab-summary-btn" class="nav-item"><i class="fa-solid fa-chart-pie"></i> Resumen & Métricas</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-outline-danger btn-block" style="margin-bottom: 15px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
+                <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted);">Paytrack® 2026</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="app-topbar">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button id="mobile-menu-toggle" class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
+                    <div class="topbar-title"><h2>Panel de Control</h2></div>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-outline btn-theme" title="Cambiar Tema"><i class="fa-solid fa-moon"></i></button>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- VISTA HISTORIAL -->
+                <section id="view-history" class="dashboard-view">
+                    <div class="section-header">
+                        <div>
+                            <h3>Historial de Transacciones</h3>
+                            <p>Registro detallado con búsqueda y filtros por fecha.</p>
+                        </div>
+                        <div><button id="export-payments-excel" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button></div>
+                    </div>
+
+                    <!-- BARRA DE BÚSQUEDA Y FILTROS -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div class="form-grid">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label><i class="fa-solid fa-magnifying-glass"></i> Buscar (Cliente, Cédula, Referencia)</label>
+                                <input type="text" id="search-input" placeholder="Escribe para buscar...">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label><i class="fa-solid fa-calendar-days"></i> Filtrar por Fecha</label>
+                                <input type="date" id="filter-date-input">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; display: flex; align-items: flex-end;">
+                                <button id="clear-filters-btn" class="btn btn-outline btn-block"><i class="fa-solid fa-filter-circle-xmark"></i> Limpiar Filtros</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-card card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha / Hora</th>
+                                        <th>Cliente</th>
+                                        <th>Cédula</th>
+                                        <th>Teléfono</th>
+                                        <th>Comprobante</th>
+                                        <th>Método</th>
+                                        <th>Monto</th>
+                                        <th>Referencia</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payment-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA CASHEA -->
+                <section id="view-cashea" class="dashboard-view hidden">
+                    <div class="section-header">
+                        <div>
+                            <h3>Gestión de Créditos Cashea</h3>
+                            <p>Control de iniciales, cuotas automáticas y comisiones.</p>
+                        </div>
+                        <div><button id="export-cashea-excel" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button></div>
+                    </div>
+                    <div class="table-card card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>N° Orden</th>
+                                        <th>Cliente</th>
+                                        <th>Cédula / Telf</th>
+                                        <th>Monto Total</th>
+                                        <th>Inicial</th>
+                                        <th>Valor por Cuota</th>
+                                        <th>Restante</th>
+                                        <th>Cuotas</th>
+                                        <th>Próx. Fecha</th>
+                                        <th>Liquidación</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cashea-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA CONCILIACIÓN -->
+                <section id="view-conciliacion" class="dashboard-view hidden">
+                    <div class="section-header">
+                        <div><h3>Conciliación de Órdenes Cashea</h3><p>Cruce de datos y cálculo de comisiones semanales (7%).</p></div>
+                    </div>
+                    <div class="card" style="margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 12px;"><i class="fa-solid fa-circle-check"></i> Verificar Orden Cashea</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label><i class="fa-solid fa-hashtag"></i> N° de Orden</label><input type="text" id="verify-order-id" placeholder="Ej: CSH-9842"></div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;"><button id="verify-order-btn" class="btn btn-primary btn-block"><i class="fa-solid fa-magnifying-glass"></i> Consultar Orden</button></div>
+                        </div>
+                        <div id="verify-result-container" class="hidden" style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border-color);"></div>
+                    </div>
+                    <div class="table-card card">
+                        <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-color);"><h4 style="margin: 0;"><i class="fa-solid fa-handshake"></i> Liquidaciones Cashea</h4></div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>N° Orden</th><th>Cliente</th><th>Monto Compra</th><th>Comisión 7% Semanal</th><th>Neto a Recibir</th><th>Estado</th></tr>
+                                </thead>
+                                <tbody id="conciliacion-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA MÉTRICAS -->
+                <section id="view-summary" class="dashboard-view hidden">
+                    <div class="section-header">
+                        <div><h3>Métricas y Estadísticas Financieras</h3><p>Análisis de caja, volumen de ventas y mejores clientes.</p></div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                <label><i class="fa-solid fa-calendar-days"></i> Filtrar Métricas Desde</label>
+                                <input type="date" id="metrics-start-date">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                <label><i class="fa-solid fa-calendar-days"></i> Filtrar Métricas Hasta</label>
+                                <input type="date" id="metrics-end-date">
+                            </div>
+                            <button id="filter-metrics-btn" class="btn btn-primary"><i class="fa-solid fa-filter"></i> Aplicar Filtro</button>
+                            <button id="reset-metrics-btn" class="btn btn-outline"><i class="fa-solid fa-rotate-left"></i> Ver Todo</button>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-vault"></i></span><div><span class="metric-label">Dinero Total en Caja</span><h3 id="kpi-total-amount">$0.00</h3></div></div>
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-chart-line"></i></span><div><span class="metric-label">Volumen de Ventas</span><h3 id="kpi-volume">$0.00</h3></div></div>
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-percent"></i></span><div><span class="metric-label">Retención Cashea (7% Semanal)</span><h3 id="kpi-cashea-commission">$0.00</h3></div></div>
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-money-bill-transfer"></i></span><div><span class="metric-label">Retención Cashea (4% Iniciales)</span><h3 id="kpi-cashea-init-commission">$0.00</h3></div></div>
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-hourglass-half"></i></span><div><span class="metric-label">Cashea en Tránsito</span><h3 id="kpi-cashea-transit">$0.00</h3></div></div>
+                        <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-circle-check"></i></span><div><span class="metric-label">Cashea Recaudado</span><h3 id="kpi-cashea-collected">$0.00</h3></div></div>
+                    </div>
+
+                    <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                        <div class="card">
+                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-trophy" style="color: var(--warning);"></i> Cliente que más dinero ha aportado</h4>
+                            <div id="top-payer-container" style="font-size: 1.1rem; color: var(--success); font-weight: bold;">N/A</div>
+                        </div>
+                        <div class="card">
+                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-bag-shopping" style="color: var(--primary);"></i> Cliente con más compras / pagos</h4>
+                            <div id="top-buyer-container" style="font-size: 1.1rem; color: var(--primary); font-weight: bold;">N/A</div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid" style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                        <div class="card" style="text-align: center;"><h4 style="margin-bottom: 15px;">Distribución de Métodos de Pago</h4><div style="max-width: 280px; margin: 0 auto;"><canvas id="paymentMethodsChart"></canvas></div></div>
+                        <div class="card" style="text-align: center;"><h4 style="margin-bottom: 15px;">Estado de Créditos Cashea</h4><div style="max-width: 280px; margin: 0 auto;"><canvas id="casheaStatusChart"></canvas></div></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- BOTONES FLOTANTES -->
+    <div id="floating-action-container" class="floating-action-container">
+        <button id="float-payment-btn" class="floating-btn btn-primary hidden" title="Registrar Nuevo Pago"><span><i class="fa-solid fa-plus"></i></span> Nuevo Pago</button>
+        <button id="float-cashea-btn" class="floating-btn btn-primary hidden" title="Nueva Orden Cashea"><span><i class="fa-solid fa-plus"></i></span> Nueva Orden Cashea</button>
+        <button id="float-unpaid-btn" class="floating-btn btn-outline-warning hidden" title="Ver Deudores"><span><i class="fa-solid fa-triangle-exclamation"></i></span> Deudores</button>
+    </div>
+
+    <!-- MODAL NUEVO / EDITAR PAGO -->
+    <div id="payment-modal" class="modal hidden">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h3 id="payment-modal-title">Registrar Nuevo Pago</h3>
+                <button id="close-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <form id="payment-form">
+                <input type="hidden" id="edit-payment-id">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-id-card"></i> Cédula de Identidad</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="modal-client-dni-type" style="width: 80px;" required>
+                                <option value="V">V</option>
+                                <option value="J">J</option>
+                                <option value="E">E</option>
+                            </select>
+                            <input type="text" id="modal-client-dni" required placeholder="12345678" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div class="form-group"><label><i class="fa-solid fa-user"></i> Nombre del Cliente</label><input type="text" id="modal-client-input" required placeholder="Nombre y Apellido"></div>
+                    <div class="form-group"><label><i class="fa-solid fa-phone"></i> Teléfono</label><input type="text" id="modal-client-phone" required placeholder="04141234567"></div>
+                </div>
+
+                <div class="payment-row-container" style="margin-top: 15px;">
+                    <div class="payment-row">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-wallet"></i> Método de Pago</label>
+                            <select class="pay-method" required>
+                                <option value="Pago Móvil">Pago Móvil</option>
+                                <option value="Punto de Venta">Punto de Venta</option>
+                                <option value="Zelle">Zelle</option>
+                                <option value="Efectivo">Efectivo</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label><i class="fa-solid fa-info-circle"></i> Estado</label><select class="pay-status"><option value="Pagado">Pagado</option><option value="Proceso">En Proceso</option></select></div>
+                        <div class="form-group"><label><i class="fa-solid fa-dollar-sign"></i> Monto ($)</label><input type="number" step="0.01" class="pay-amount" required placeholder="0.00"></div>
+                        <div class="form-group"><label><i class="fa-solid fa-hashtag"></i> Referencia / Nota</label><input type="text" class="pay-ref" required placeholder="N° Referencia"></div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <label><i class="fa-solid fa-file-arrow-up"></i> Comprobante de Pago o Generar QR para el Celular</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                        <input type="file" id="payment-file-input" accept="image/*" capture="environment" style="flex: 1;">
+                        <button type="button" id="generate-qr-btn" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-qrcode"></i> Generar QR para Subida Móvil</button>
+                    </div>
+
+                    <div id="qr-code-generator-container" class="hidden" style="margin-top: 10px; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <div id="qrcode" style="display: inline-block; padding: 10px; background: #fff; border-radius: 6px;"></div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con el celular para enviar tu comprobante</p>
+                        <button type="button" id="close-qr-gen-btn" class="btn btn-outline-danger" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cerrar QR</button>
+                    </div>
+                </div>
+
+                <div class="modal-footer"><button type="submit" class="btn btn-primary" id="payment-submit-btn"><i class="fa-solid fa-floppy-disk"></i> Guardar Pago</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CASHEA -->
+    <div id="cashea-modal" class="modal hidden">
+        <div class="modal-content card">
+            <div class="modal-header"><h3><i class="fa-solid fa-credit-card"></i> Nueva Orden Cashea</h3><button id="close-cashea-modal-btn" class="close-btn">&times;</button></div>
+            <form id="cashea-form">
+                <div class="form-grid">
+                    <div class="form-group"><label><i class="fa-solid fa-hashtag"></i> N° de Orden Cashea</label><input type="text" id="cashea-order-id" required placeholder="Ej: CSH-1025"></div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-id-card"></i> Cédula del Cliente</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="cashea-dni-type" style="width: 80px;" required>
+                                <option value="V">V</option>
+                                <option value="J">J</option>
+                                <option value="E">E</option>
+                            </select>
+                            <input type="text" id="cashea-dni" required placeholder="12345678" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div class="form-group"><label><i class="fa-solid fa-user"></i> Nombre del Cliente</label><input type="text" id="cashea-client" required placeholder="Nombre y Apellido"></div>
+                    <div class="form-group"><label><i class="fa-solid fa-phone"></i> Teléfono</label><input type="text" id="cashea-phone" required placeholder="04141234567"></div>
+                    <div class="form-group"><label><i class="fa-solid fa-dollar-sign"></i> Monto Total Producto ($)</label><input type="number" step="0.01" id="cashea-total-amount" required placeholder="200.00"></div>
+                    <div class="form-group"><label><i class="fa-solid fa-percent"></i> Descuento Cashea (%)</label><input type="number" step="0.01" id="cashea-discount-percent" value="10" required></div>
+                    
+                    <!-- Selector de Iniciales con opciones: 0, 25, 35, 50, 75 -->
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-hand-holding-dollar"></i> Inicial del Cliente (%)</label>
+                        <select id="cashea-down-payment-percent" required>
+                            <option value="0">0%</option>
+                            <option value="25" selected>25%</option>
+                            <option value="35">35%</option>
+                            <option value="50">50%</option>
+                            <option value="75">75%</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-wallet"></i> Método de Pago (Inicial)</label>
+                        <select id="cashea-payment-method" required>
+                            <option value="Cashea/Pago Móvil">Cashea/Pago Móvil</option>
+                            <option value="Cashea/Punto de Venta">Cashea/Punto de Venta</option>
+                            <option value="Cashea/Zelle">Cashea/Zelle</option>
+                            <option value="Cashea/Efectivo">Cashea/Efectivo</option>
+                        </select>
+                    </div>
+
+                    <!-- Selector de Cuotas con opciones: 3, 6, 9, 12 -->
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-layer-group"></i> Total de Cuotas</label>
+                        <select id="cashea-total-installments" required>
+                            <option value="3" selected>3 Cuotas</option>
+                            <option value="6">6 Cuotas</option>
+                            <option value="9">9 Cuotas</option>
+                            <option value="12">12 Cuotas</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group"><label><i class="fa-solid fa-calendar-days"></i> Próxima Fecha de Pago</label><input type="date" id="cashea-next-date" required></div>
+                </div>
+                <div class="modal-footer"><button type="button" id="cancel-cashea-btn" class="btn btn-outline">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Registrar Orden Cashea</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ABONO -->
+    <div id="cashea-abono-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 450px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-credit-card"></i> Registrar Cuota / Abono Cashea</h3><button id="close-abono-modal-btn" class="close-btn">&times;</button></div>
+            <form id="cashea-abono-form">
+                <input type="hidden" id="abono-cashea-id">
+                <div class="form-group"><label><i class="fa-solid fa-user"></i> Cliente / Orden</label><input type="text" id="abono-client-name" readonly style="background: rgba(255,255,255,0.05);"></div>
+                <div class="form-group"><label><i class="fa-solid fa-dollar-sign"></i> Monto del Abono / Cuota ($) [Sugerido Automático]</label><input type="number" step="0.01" id="abono-amount" required placeholder="0.00"></div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-wallet"></i> Método de Pago (Cuota)</label>
+                    <select id="abono-payment-method" required>
+                        <option value="Cashea/Pago Móvil">Cashea/Pago Móvil</option>
+                        <option value="Cashea/Punto de Venta">Cashea/Punto de Venta</option>
+                        <option value="Cashea/Zelle">Cashea/Zelle</option>
+                        <option value="Cashea/Efectivo">Cashea/Efectivo</option>
+                    </select>
+                </div>
+                <div class="form-group"><label><i class="fa-solid fa-calendar-days"></i> Próxima Fecha</label><input type="date" id="abono-next-date" required></div>
+                <div class="modal-footer"><button type="button" id="cancel-abono-btn" class="btn btn-outline">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Registrar Abono</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DEUDORES -->
+    <div id="unpaid-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 800px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-triangle-exclamation" style="color: var(--warning);"></i> Clientes con Deudas Pendientes (Cashea)</h3><button id="close-unpaid-modal-btn" class="close-btn">&times;</button></div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <table class="data-table">
+                    <thead><tr><th>Cliente</th><th>Cédula / Telf</th><th>Deuda Restante</th><th>Próx. Fecha</th><th>Estado</th></tr></thead>
+                    <tbody id="unpaid-table-body"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="margin-top: 20px;"><button id="close-unpaid-modal-footer-btn" class="btn btn-primary">Cerrar</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMACIÓN -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 400px; text-align: center;">
+            <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-circle-question" style="color: var(--warning);"></i> ¿Estás seguro?</h3>
+            <p id="confirm-message" style="margin-bottom: 25px; color: var(--text-muted);"></p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="confirm-cancel-btn" class="btn btn-outline" style="flex: 1;">Cancelar</button>
+                <button id="confirm-accept-btn" class="btn btn-outline-danger" style="flex: 1;"><i class="fa-solid fa-trash"></i> Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISUALIZADOR DE IMÁGENES -->
+    <div id="image-viewer-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 500px; text-align: center; background: var(--bg-card);">
+            <button id="close-viewer-btn" class="close-btn">&times;</button>
+            <img id="viewer-full-image" src="" alt="Comprobante" style="max-width: 100%; border-radius: 8px; margin-top: 15px;">
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
