@@ -21,7 +21,6 @@ const analytics = getAnalytics(app);
 
 // ==========================================
 // ESTADO Y VARIABLES DE LA APLICACIÓN
-// (7 Tiendas predefinidas + Administrador general)
 // ==========================================
 let users = [
     { user: 'admin', pass: '1234', role: 'admin', store: 'General' },
@@ -41,7 +40,7 @@ let currentUser = null;
 let pendingDeleteCallback = null;
 let activeTabName = 'history';
 let chartsInstance = { methods: null, cashea: null };
-let pendingMobileImage = null; // Imagen recibida vía PeerJS
+let pendingMobileImage = null; 
 
 let pcPeer = null;
 let currentPeerId = null;
@@ -67,7 +66,6 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', toggleTheme);
     });
 
-    // Detectar si estamos en modo de subida móvil por QR (?upload=true&peer=...)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('upload') === 'true') {
         const landing = document.getElementById('landing-container');
@@ -85,11 +83,9 @@ window.addEventListener('DOMContentLoaded', () => {
     initFirebaseListeners();
 });
 
-// Inicializar PeerJS en la PC para recibir la foto del celular directamente
 function initPcPeer() {
-    if (pcPeer) return; // Ya está activo
-
-    pcPeer = new Peer(); // Genera un ID aleatorio en los servidores públicos de PeerJS
+    if (pcPeer) return;
+    pcPeer = new Peer();
 
     pcPeer.on('open', (id) => {
         currentPeerId = id;
@@ -111,7 +107,6 @@ function initPcPeer() {
     });
 }
 
-// Lógica del cel cuando escanea el QR y envía la foto vía PeerJS a la PC
 function setupMobilePeerUpload(pcPeerId) {
     const form = document.getElementById('mobile-upload-form');
     if (!form) return;
@@ -131,7 +126,6 @@ function setupMobilePeerUpload(pcPeerId) {
                 const conn = mobilePeer.connect(pcPeerId);
 
                 conn.on('open', () => {
-                    // Enviar imagen directamente a la PC por internet (P2P)
                     conn.send({
                         type: 'RECEIPT_IMAGE',
                         image: compressedBase64
@@ -152,7 +146,6 @@ function setupMobilePeerUpload(pcPeerId) {
     });
 }
 
-// Configuración de Generación de QR con PeerJS
 function setupQrGenerator() {
     const generateQrBtn = document.getElementById('generate-qr-btn');
     const qrContainer = document.getElementById('qr-code-generator-container');
@@ -160,8 +153,7 @@ function setupQrGenerator() {
 
     if (generateQrBtn && qrContainer) {
         generateQrBtn.addEventListener('click', () => {
-            initPcPeer(); // Iniciar servidor Peer de la PC
-
+            initPcPeer();
             const checkPeerReady = setInterval(() => {
                 if (currentPeerId) {
                     clearInterval(checkPeerReady);
@@ -170,20 +162,14 @@ function setupQrGenerator() {
                     qrcodeDiv.innerHTML = '';
                     
                     const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true&peer=${currentPeerId}`;
-                    new QRCode(qrcodeDiv, {
-                        text: uploadUrl,
-                        width: 160,
-                        height: 160
-                    });
+                    new QRCode(qrcodeDiv, { text: uploadUrl, width: 160, height: 160 });
                 }
             }, 200);
         });
     }
 
     if (closeQrGenBtn && qrContainer) {
-        closeQrGenBtn.addEventListener('click', () => {
-            qrContainer.classList.add('hidden');
-        });
+        closeQrGenBtn.addEventListener('click', () => qrContainer.classList.add('hidden'));
     }
 
     const generateCasheaQrBtn = document.getElementById('generate-cashea-qr-btn');
@@ -193,7 +179,6 @@ function setupQrGenerator() {
     if (generateCasheaQrBtn && casheaQrContainer) {
         generateCasheaQrBtn.addEventListener('click', () => {
             initPcPeer();
-
             const checkPeerReady = setInterval(() => {
                 if (currentPeerId) {
                     clearInterval(checkPeerReady);
@@ -202,24 +187,17 @@ function setupQrGenerator() {
                     qrcodeDiv.innerHTML = '';
                     
                     const uploadUrl = `${window.location.origin}${window.location.pathname}?upload=true&peer=${currentPeerId}`;
-                    new QRCode(qrcodeDiv, {
-                        text: uploadUrl,
-                        width: 160,
-                        height: 160
-                    });
+                    new QRCode(qrcodeDiv, { text: uploadUrl, width: 160, height: 160 });
                 }
             }, 200);
         });
     }
 
     if (closeCasheaQrBtn && casheaQrContainer) {
-        closeCasheaQrBtn.addEventListener('click', () => {
-            casheaQrContainer.classList.add('hidden');
-        });
+        closeCasheaQrBtn.addEventListener('click', () => casheaQrContainer.classList.add('hidden'));
     }
 }
 
-// Sincronización en tiempo real con Firestore
 function initFirebaseListeners() {
     onSnapshot(collection(db, "payments"), (snapshot) => {
         payments = snapshot.docs.map(doc => ({ idDoc: doc.id, ...doc.data() }));
@@ -309,24 +287,23 @@ const appSidebar = document.getElementById('app-sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 
 const navLoginBtn = document.getElementById('nav-login-btn');
-const navRegisterBtn = document.getElementById('nav-register-btn');
 const heroGetStarted = document.getElementById('hero-get-started');
 const backToLanding = document.getElementById('back-to-landing');
 
 const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
-const showRegisterLink = document.getElementById('show-register');
-const showLoginLink = document.getElementById('show-login');
+const adminCreateUserForm = document.getElementById('admin-create-user-form');
 
 const tabHistoryBtn = document.getElementById('tab-history-btn');
 const tabCasheaBtn = document.getElementById('tab-cashea-btn');
 const tabConciliacionBtn = document.getElementById('tab-conciliacion-btn');
 const tabSummaryBtn = document.getElementById('tab-summary-btn');
+const tabEmployeesBtn = document.getElementById('tab-employees-btn');
 
 const viewHistory = document.getElementById('view-history');
 const viewCashea = document.getElementById('view-cashea');
 const viewConciliacion = document.getElementById('view-conciliacion');
 const viewSummary = document.getElementById('view-summary');
+const viewEmployees = document.getElementById('view-employees');
 
 const floatPaymentBtn = document.getElementById('float-payment-btn');
 const floatCasheaBtn = document.getElementById('float-cashea-btn');
@@ -390,8 +367,8 @@ function updateFloatingButtons() {
 }
 
 function switchTab(activeBtn, activeView, tabName) {
-    [tabHistoryBtn, tabCasheaBtn, tabConciliacionBtn, tabSummaryBtn].forEach(btn => btn && btn.classList.remove('active'));
-    [viewHistory, viewCashea, viewConciliacion, viewSummary].forEach(view => view && view.classList.add('hidden'));
+    [tabHistoryBtn, tabCasheaBtn, tabConciliacionBtn, tabSummaryBtn, tabEmployeesBtn].forEach(btn => btn && btn.classList.remove('active'));
+    [viewHistory, viewCashea, viewConciliacion, viewSummary, viewEmployees].forEach(view => view && view.classList.add('hidden'));
 
     if (activeBtn) activeBtn.classList.add('active');
     if (activeView) activeView.classList.remove('hidden');
@@ -403,6 +380,7 @@ function switchTab(activeBtn, activeView, tabName) {
     if (activeView === viewCashea) renderCasheaTable();
     if (activeView === viewConciliacion) renderConciliacionView();
     if (activeView === viewSummary) renderMetrics();
+    if (activeView === viewEmployees) renderEmployeesTable();
     closeSidebar();
 }
 
@@ -410,43 +388,24 @@ if (tabHistoryBtn) tabHistoryBtn.addEventListener('click', (e) => { e.preventDef
 if (tabCasheaBtn) tabCasheaBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab(tabCasheaBtn, viewCashea, 'cashea'); });
 if (tabConciliacionBtn) tabConciliacionBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab(tabConciliacionBtn, viewConciliacion, 'conciliacion'); });
 if (tabSummaryBtn) tabSummaryBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab(tabSummaryBtn, viewSummary, 'summary'); });
+if (tabEmployeesBtn) tabEmployeesBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab(tabEmployeesBtn, viewEmployees, 'employees'); });
 
 if (floatPaymentBtn) floatPaymentBtn.addEventListener('click', () => openPaymentModalForNew());
 if (floatCasheaBtn) floatCasheaBtn.addEventListener('click', () => { if (casheaModal) casheaModal.classList.remove('hidden'); });
 if (floatUnpaidBtn) floatUnpaidBtn.addEventListener('click', () => { renderUnpaidList(); if (unpaidModal) unpaidModal.classList.remove('hidden'); });
 
-function goToAuth(showRegister = false) {
+function goToAuth() {
     if (landingContainer && authContainer) {
         landingContainer.classList.add('hidden');
         authContainer.classList.remove('hidden');
-        if (showRegister) {
-            loginForm.classList.add('hidden');
-            registerForm.classList.remove('hidden');
-        } else {
-            registerForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-        }
     }
 }
 
-if (navLoginBtn) navLoginBtn.addEventListener('click', () => goToAuth(false));
-if (navRegisterBtn) navRegisterBtn.addEventListener('click', () => goToAuth(true));
-if (heroGetStarted) heroGetStarted.addEventListener('click', () => goToAuth(true));
+if (navLoginBtn) navLoginBtn.addEventListener('click', () => goToAuth());
+if (heroGetStarted) heroGetStarted.addEventListener('click', () => goToAuth());
 if (backToLanding) backToLanding.addEventListener('click', () => { 
     authContainer.classList.add('hidden'); 
     landingContainer.classList.remove('hidden'); 
-});
-
-if (showRegisterLink) showRegisterLink.addEventListener('click', (e) => { 
-    e.preventDefault(); 
-    loginForm.classList.add('hidden'); 
-    registerForm.classList.remove('hidden'); 
-});
-
-if (showLoginLink) showLoginLink.addEventListener('click', (e) => { 
-    e.preventDefault(); 
-    registerForm.classList.add('hidden'); 
-    loginForm.classList.remove('hidden'); 
 });
 
 if (loginForm) {
@@ -467,7 +426,6 @@ if (loginForm) {
             document.getElementById('role-display').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Empleado';
             document.getElementById('store-display').textContent = `Sucursal: ${currentUser.store}`;
 
-            // Restringir navegación visual de admin
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (currentUser.role === 'employee') {
                     el.classList.add('hidden');
@@ -476,7 +434,6 @@ if (loginForm) {
                 }
             });
 
-            // Ocultar selector de tienda en modales si es empleado
             document.querySelectorAll('.admin-only-field').forEach(el => {
                 if (currentUser.role === 'employee') {
                     el.classList.add('hidden');
@@ -485,7 +442,7 @@ if (loginForm) {
                 }
             });
 
-            if (currentUser.role === 'employee' && (activeTabName === 'conciliacion' || activeTabName === 'summary')) {
+            if (currentUser.role === 'employee' && (activeTabName === 'conciliacion' || activeTabName === 'summary' || activeTabName === 'employees')) {
                 switchTab(tabHistoryBtn, viewHistory, 'history');
             }
 
@@ -497,13 +454,12 @@ if (loginForm) {
     });
 }
 
-if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
+if (adminCreateUserForm) {
+    adminCreateUserForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const regUser = document.getElementById('reg-user').value.trim();
-        const regPass = document.getElementById('reg-pass').value.trim();
-        const regRole = document.getElementById('reg-role').value;
-        const regStore = document.getElementById('reg-store').value;
+        const regUser = document.getElementById('admin-reg-user').value.trim();
+        const regPass = document.getElementById('admin-reg-pass').value.trim();
+        const regStore = document.getElementById('admin-reg-store').value;
 
         const exists = users.some(u => u.user.toLowerCase() === regUser.toLowerCase());
         if (exists) {
@@ -511,12 +467,26 @@ if (registerForm) {
             return;
         }
 
-        users.push({ user: regUser, pass: regPass, role: regRole, store: regStore });
-        showToast('Sucursal y cuenta creada con éxito. ¡Inicia sesión!', 'success');
-        registerForm.reset();
-        registerForm.classList.add('hidden');
-        loginForm.classList.remove('hidden');
-        document.getElementById('login-user').value = regUser;
+        users.push({ user: regUser, pass: regPass, role: 'employee', store: regStore });
+        showToast(`Empleado "${regUser}" creado para la sucursal [${regStore}]`, 'success');
+        adminCreateUserForm.reset();
+        renderEmployeesTable();
+    });
+}
+
+function renderEmployeesTable() {
+    const tbody = document.getElementById('employees-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    users.filter(u => u.role === 'employee').forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${u.user}</strong></td>
+            <td><span class="badge status-proceso">Empleado</span></td>
+            <td><span class="badge" style="background: rgba(99,102,241,0.1); color: var(--primary);">${u.store}</span></td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
@@ -578,6 +548,7 @@ if (paymentForm) {
         e.preventDefault();
         const editId = document.getElementById('edit-payment-id').value;
         const store = currentUser.role === 'employee' ? currentUser.store : document.getElementById('modal-payment-store').value;
+        const createdBy = currentUser.user;
         const targetUser = document.getElementById('modal-client-input').value.trim();
         const dniType = document.getElementById('modal-client-dni-type').value;
         const dniNum = document.getElementById('modal-client-dni').value.trim();
@@ -593,19 +564,21 @@ if (paymentForm) {
         const fileInput = paymentFileInput;
 
         if (pendingMobileImage) {
-            savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
+            savePaymentData(editId, store, createdBy, targetUser, dni, phone, method, status, amount, ref, pendingMobileImage);
             pendingMobileImage = null;
         } else if (fileInput && fileInput.files && fileInput.files[0]) {
             compressImage(fileInput.files[0], 800, 0.7, (compressedBase64) => {
-                savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
+                savePaymentData(editId, store, createdBy, targetUser, dni, phone, method, status, amount, ref, compressedBase64);
             });
         } else {
             let existingImage = '';
+            let existingCreatedBy = currentUser.user;
             if (editId) {
                 const existing = payments.find(p => p.idDoc === editId);
                 existingImage = existing ? existing.image : '';
+                existingCreatedBy = existing ? (existing.createdBy || 'Admin') : currentUser.user;
             }
-            savePaymentData(editId, store, targetUser, dni, phone, method, status, amount, ref, existingImage);
+            savePaymentData(editId, store, existingCreatedBy, targetUser, dni, phone, method, status, amount, ref, existingImage);
         }
     });
 }
@@ -638,22 +611,22 @@ function compressImage(file, maxWidth, quality, callback) {
     reader.readAsDataURL(file);
 }
 
-async function savePaymentData(editId, store, user, dni, phone, method, status, amount, ref, image) {
+async function savePaymentData(editId, store, createdBy, user, dni, phone, method, status, amount, ref, image) {
     const now = new Date();
     const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
     try {
         if (editId) {
             const paymentRef = doc(db, "payments", editId);
-            await updateDoc(paymentRef, { store, user, dni, phone, method, status, amount, ref, image });
+            await updateDoc(paymentRef, { store, createdBy, user, dni, phone, method, status, amount, ref, image });
             showToast('Pago actualizado en Firebase', 'success');
         } else {
             await addDoc(collection(db, "payments"), {
-                store, user, dni, phone, method, amount, ref, status,
+                store, createdBy, user, dni, phone, method, amount, ref, status,
                 datetime: formattedDateTime,
                 image
             });
-            showToast(`Pago guardado para la sucursal [${store}]`, 'success');
+            showToast(`Pago guardado para la sucursal [${store}] por [${createdBy}]`, 'success');
         }
         paymentModal.classList.add('hidden');
         paymentForm.reset();
@@ -674,6 +647,7 @@ if (casheaForm) {
     casheaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const store = currentUser.role === 'employee' ? currentUser.store : document.getElementById('modal-cashea-store').value;
+        const createdBy = currentUser.user;
         const orderId = document.getElementById('cashea-order-id').value.trim();
         const user = document.getElementById('cashea-client').value.trim();
         const dniType = document.getElementById('cashea-dni-type').value;
@@ -702,7 +676,7 @@ if (casheaForm) {
 
         try {
             await addDoc(collection(db, "casheaRecords"), {
-                store, orderId, user, dni, phone, totalAmount, discountPercent, downPaymentPercent,
+                store, createdBy, orderId, user, dni, phone, totalAmount, discountPercent, downPaymentPercent,
                 paidAmount: clientDownPaymentAmount,
                 totalInstallments,
                 paidInstallments: 0,
@@ -714,7 +688,7 @@ if (casheaForm) {
 
             if (clientDownPaymentAmount > 0) {
                 await addDoc(collection(db, "payments"), {
-                    store, user, dni, phone,
+                    store, createdBy, user, dni, phone,
                     method: casheaMethod,
                     amount: clientDownPaymentAmount,
                     ref: `Inicial Ord #${orderId}`,
@@ -742,6 +716,7 @@ if (casheaAbonoForm) {
         const amount = parseFloat(document.getElementById('abono-amount').value);
         const abonoMethod = document.getElementById('abono-payment-method').value;
         const nextDate = document.getElementById('abono-next-date').value;
+        const createdBy = currentUser.user;
 
         const record = casheaRecords.find(c => c.idDoc === idDoc);
         if (record) {
@@ -777,6 +752,7 @@ if (casheaAbonoForm) {
                 
                 await addDoc(collection(db, "payments"), {
                     store: record.store,
+                    createdBy,
                     user: record.user,
                     dni: record.dni,
                     phone: record.phone,
@@ -805,11 +781,12 @@ function exportTableToExcel(filename, tableType) {
     const targetCashea = currentUser.role === 'employee' ? casheaRecords.filter(c => c.store === currentUser.store) : casheaRecords;
 
     if (tableType === 'payments') {
-        csv.push(["FechaHora", "Tienda", "Cliente", "Cedula", "Telefono", "Metodo", "Monto", "Referencia", "Estado"].join(";"));
+        csv.push(["FechaHora", "Tienda", "Empleado", "Cliente", "Cedula", "Telefono", "Metodo", "Monto", "Referencia", "Estado"].join(";"));
         targetPayments.forEach(p => {
             csv.push([
                 `"${p.datetime || ''}"`,
                 `"${p.store || 'General'}"`,
+                `"${p.createdBy || 'Admin'}"`,
                 `"${(p.user || '').replace(/"/g, '""')}"`,
                 `"${p.dni || ''}"`,
                 `"${p.phone || ''}"`,
@@ -820,11 +797,12 @@ function exportTableToExcel(filename, tableType) {
             ].join(";"));
         });
     } else if (tableType === 'cashea') {
-        csv.push(["Orden", "Tienda", "FechaHora", "Cliente", "Cedula", "Telefono", "MontoTotal", "DescuentoPct", "InicialPct", "Abonado", "Estado", "Liquidacion"].join(";"));
+        csv.push(["Orden", "Tienda", "Empleado", "FechaHora", "Cliente", "Cedula", "Telefono", "MontoTotal", "DescuentoPct", "InicialPct", "Abonado", "Estado", "Liquidacion"].join(";"));
         targetCashea.forEach(c => {
             csv.push([
                 `"${c.orderId || ''}"`,
                 `"${c.store || 'General'}"`,
+                `"${c.createdBy || 'Admin'}"`,
                 `"${c.datetime || ''}"`,
                 `"${(c.user || '').replace(/"/g, '""')}"`,
                 `"${c.dni || ''}"`,
@@ -877,6 +855,7 @@ if (verifyOrderBtn) {
             container.innerHTML = `
                 <h5 style="color: var(--success); margin-bottom: 8px;"><i class="fa-solid fa-circle-check"></i> Orden Encontrada</h5>
                 <p><strong>Tienda:</strong> ${found.store || 'General'}</p>
+                <p><strong>Registrado por:</strong> ${found.createdBy || 'Admin'}</p>
                 <p><strong>Cliente:</strong> ${found.user} (${found.dni})</p>
                 <p><strong>Monto Compra Neto:</strong> $${finalPrice.toFixed(2)}</p>
                 <p><strong>Comisión Cashea (7% Semanal):</strong> -$${commission7.toFixed(2)}</p>
@@ -897,7 +876,7 @@ function renderConciliacionView() {
     const targetCashea = currentUser.role === 'employee' ? casheaRecords.filter(c => c.store === currentUser.store) : casheaRecords;
 
     if (targetCashea.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No hay órdenes Cashea.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No hay órdenes Cashea.</td></tr>`;
         return;
     }
 
@@ -910,6 +889,7 @@ function renderConciliacionView() {
         tr.innerHTML = `
             <td><strong>#${c.orderId}</strong></td>
             <td>${c.store || 'General'}</td>
+            <td><span class="badge status-proceso">${c.createdBy || 'Admin'}</span></td>
             <td>${c.user}</td>
             <td>$${finalPrice.toFixed(2)}</td>
             <td style="color: var(--danger);">-$${commission7.toFixed(2)}</td>
@@ -925,6 +905,7 @@ function setupDashboard() {
     renderCasheaTable();
     renderConciliacionView();
     renderMetrics();
+    renderEmployeesTable();
 }
 
 function renderTable() {
@@ -952,7 +933,7 @@ function renderTable() {
     });
 
     if (filteredPayments.length === 0) {
-        paymentTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center;">No se encontraron transacciones.</td></tr>`;
+        paymentTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No se encontraron transacciones.</td></tr>`;
         return;
     }
     
@@ -961,6 +942,7 @@ function renderTable() {
         tr.innerHTML = `
             <td class="date-cell">${p.datetime || 'N/A'}</td>
             <td><span class="badge" style="background: rgba(99,102,241,0.1); color: var(--primary);">${p.store || 'General'}</span></td>
+            <td><span class="badge status-proceso">${p.createdBy || 'Admin'}</span></td>
             <td><strong>${p.user}</strong></td>
             <td>${p.dni || 'N/A'}</td>
             <td>${p.phone || 'N/A'}</td>
@@ -991,7 +973,7 @@ function renderCasheaTable() {
     });
 
     if (targetCashea.length === 0) {
-        casheaTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay órdenes Cashea para esta tienda.</td></tr>`;
+        casheaTableBody.innerHTML = `<tr><td colspan="13" style="text-align:center;">No hay órdenes Cashea para esta tienda.</td></tr>`;
         return;
     }
 
@@ -1005,6 +987,7 @@ function renderCasheaTable() {
         tr.innerHTML = `
             <td><strong>#${c.orderId}</strong></td>
             <td><span class="badge" style="background: rgba(99,102,241,0.1); color: var(--primary);">${c.store || 'General'}</span></td>
+            <td><span class="badge status-proceso">${c.createdBy || 'Admin'}</span></td>
             <td>${c.user}</td>
             <td>${c.dni}<br><small>${c.phone}</small></td>
             <td>$${c.totalAmount.toFixed(2)}</td>
@@ -1047,6 +1030,8 @@ function renderMetrics() {
 
     const payerTotals = {};
     const buyerCounts = {};
+    const storeTotals = {};
+    const employeeTotals = {};
 
     filteredPayments.forEach(p => {
         totalVolume += p.amount;
@@ -1055,6 +1040,14 @@ function renderMetrics() {
         if (p.user) {
             payerTotals[p.user] = (payerTotals[p.user] || 0) + p.amount;
             buyerCounts[p.user] = (buyerCounts[p.user] || 0) + 1;
+        }
+
+        if (p.store) {
+            storeTotals[p.store] = (storeTotals[p.store] || 0) + p.amount;
+        }
+
+        if (p.createdBy) {
+            employeeTotals[p.createdBy] = (employeeTotals[p.createdBy] || 0) + p.amount;
         }
     });
 
@@ -1084,12 +1077,21 @@ function renderMetrics() {
         }
     }
 
-    let topBuyer = 'N/A';
-    let maxCount = -1;
-    for (const [user, count] of Object.entries(buyerCounts)) {
-        if (count > maxCount) {
-            maxCount = count;
-            topBuyer = `${user} (${count} compras)`;
+    let topStore = 'N/A';
+    let maxStoreAmt = -1;
+    for (const [store, amount] of Object.entries(storeTotals)) {
+        if (amount > maxStoreAmt) {
+            maxStoreAmt = amount;
+            topStore = `${store} ($${amount.toFixed(2)})`;
+        }
+    }
+
+    let topEmployee = 'N/A';
+    let maxEmpAmt = -1;
+    for (const [emp, amount] of Object.entries(employeeTotals)) {
+        if (amount > maxEmpAmt) {
+            maxEmpAmt = amount;
+            topEmployee = `${emp} ($${amount.toFixed(2)})`;
         }
     }
 
@@ -1100,8 +1102,9 @@ function renderMetrics() {
     document.getElementById('kpi-cashea-transit').textContent = `$${transitTotal.toFixed(2)}`;
     document.getElementById('kpi-cashea-collected').textContent = `$${collectedCashea.toFixed(2)}`;
 
+    document.getElementById('top-store-container').textContent = topStore;
+    document.getElementById('top-employee-container').textContent = topEmployee;
     document.getElementById('top-payer-container').textContent = topPayer;
-    document.getElementById('top-buyer-container').textContent = topBuyer;
 
     renderCharts(filteredPayments, targetCashea);
 }

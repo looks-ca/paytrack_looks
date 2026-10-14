@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <!-- LANDING PAGE -->
+    <!-- LANDING PAGE (SIN OPCIÓN DE REGISTRO PÚBLICO) -->
     <div id="landing-container" class="landing-page">
         <header class="landing-header">
             <div class="landing-logo">
@@ -52,8 +52,7 @@
             </div>
             <div class="landing-nav-actions">
                 <button class="btn btn-outline btn-theme" title="Cambiar Tema"><i class="fa-solid fa-moon"></i></button>
-                <button id="nav-login-btn" class="btn btn-outline"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
-                <button id="nav-register-btn" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Registrarse</button>
+                <button id="nav-login-btn" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
             </div>
         </header>
 
@@ -63,7 +62,7 @@
                 <h2>Administra tus pagos, créditos y caja de forma inteligente</h2>
                 <p>Control absoluto de tus sucursales, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones en la nube.</p>
                 <div class="hero-buttons">
-                    <button id="hero-get-started" class="btn btn-primary btn-lg">Comenzar Gratis <i class="fa-solid fa-rocket"></i></button>
+                    <button id="hero-get-started" class="btn btn-primary btn-lg">Acceder al Sistema <i class="fa-solid fa-rocket"></i></button>
                 </div>
             </div>
             <div class="hero-image-mockup">
@@ -92,7 +91,7 @@
         </footer>
     </div>
 
-    <!-- AUTENTICACIÓN -->
+    <!-- AUTENTICACIÓN (SOLO LOGIN) -->
     <div id="auth-container" class="auth-container hidden">
         <div class="auth-card card">
             <button id="back-to-landing" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Volver</button>
@@ -109,43 +108,6 @@
                     <input type="password" id="login-pass" required placeholder="••••••••">
                 </div>
                 <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
-                <p class="auth-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate aquí</a></p>
-                <div style="text-align: center; margin-top: 25px; font-size: 0.75rem; color: var(--text-muted);">Paytrack® v1.0</div>
-            </form>
-
-            <form id="register-form" class="auth-form hidden">
-                <div class="auth-card-header" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 20px;">
-                    <img src="paytrack.png" alt="Paytrack" class="auth-logo-img" onerror="this.style.display='none'">
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-solid fa-user-plus"></i> Nuevo Usuario</label>
-                    <input type="text" id="reg-user" required placeholder="Ej: empleado_nuevo">
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-solid fa-lock"></i> Contraseña</label>
-                    <input type="password" id="reg-pass" required placeholder="••••••••">
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-solid fa-user-shield"></i> Rol</label>
-                    <select id="reg-role" required>
-                        <option value="admin">Administrador</option>
-                        <option value="employee" selected>Empleado</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-solid fa-store"></i> Tienda / Sucursal</label>
-                    <select id="reg-store" required>
-                        <option value="Caracas">Caracas</option>
-                        <option value="Cabudare">Cabudare</option>
-                        <option value="Acarigua">Acarigua</option>
-                        <option value="San Felipe">San Felipe</option>
-                        <option value="metropolis-barquisimeto">Metropolis Barquisimeto</option>
-                        <option value="sambil-barquisimeto">Sambil Barquisimeto</option>
-                        <option value="Valencia">Valencia</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-user-check"></i> Registrarse</button>
-                <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
                 <div style="text-align: center; margin-top: 25px; font-size: 0.75rem; color: var(--text-muted);">Paytrack® v1.0</div>
             </form>
         </div>
@@ -172,6 +134,7 @@
                 <a href="#" id="tab-cashea-btn" class="nav-item"><i class="fa-solid fa-credit-card"></i> Módulo Cashea</a>
                 <a href="#" id="tab-conciliacion-btn" class="nav-item admin-only"><i class="fa-solid fa-file-invoice-dollar"></i> Conciliación de Órdenes</a>
                 <a href="#" id="tab-summary-btn" class="nav-item admin-only"><i class="fa-solid fa-chart-pie"></i> Resumen & Métricas</a>
+                <a href="#" id="tab-employees-btn" class="nav-item admin-only"><i class="fa-solid fa-users-gear"></i> Gestión de Empleados</a>
             </nav>
             <div class="sidebar-footer">
                 <button id="logout-btn" class="btn btn-outline-danger btn-block" style="margin-bottom: 15px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
@@ -225,6 +188,7 @@
                                     <tr>
                                         <th>Fecha / Hora</th>
                                         <th>Tienda</th>
+                                        <th>Registrado por</th>
                                         <th>Cliente</th>
                                         <th>Cédula</th>
                                         <th>Teléfono</th>
@@ -258,6 +222,7 @@
                                     <tr>
                                         <th>N° Orden</th>
                                         <th>Tienda</th>
+                                        <th>Creado por</th>
                                         <th>Cliente</th>
                                         <th>Cédula / Telf</th>
                                         <th>Monto Total</th>
@@ -294,7 +259,7 @@
                         <div class="table-responsive">
                             <table class="data-table">
                                 <thead>
-                                    <tr><th>N° Orden</th><th>Tienda</th><th>Cliente</th><th>Monto Compra</th><th>Comisión 7% Semanal</th><th>Neto a Recibir</th><th>Estado</th></tr>
+                                    <tr><th>N° Orden</th><th>Tienda</th><th>Empleado / Creador</th><th>Cliente</th><th>Monto Compra</th><th>Comisión 7% Semanal</th><th>Neto a Recibir</th><th>Estado</th></tr>
                                 </thead>
                                 <tbody id="conciliacion-table-body"></tbody>
                             </table>
@@ -305,7 +270,7 @@
                 <!-- VISTA MÉTRICAS -->
                 <section id="view-summary" class="dashboard-view hidden">
                     <div class="section-header">
-                        <div><h3>Métricas y Estadísticas Financieras</h3><p>Análisis de caja, volumen de ventas y mejores clientes.</p></div>
+                        <div><h3>Métricas y Estadísticas Financieras</h3><p>Análisis de caja, volumen de ventas, tiendas y empleados destacados.</p></div>
                     </div>
 
                     <div class="card" style="margin-bottom: 20px;">
@@ -332,20 +297,67 @@
                         <div class="metric-card card"><span class="metric-icon"><i class="fa-solid fa-circle-check"></i></span><div><span class="metric-label">Cashea Recaudado</span><h3 id="kpi-cashea-collected">$0.00</h3></div></div>
                     </div>
 
-                    <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                    <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
                         <div class="card">
-                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-trophy" style="color: var(--warning);"></i> Cliente que más dinero ha aportado</h4>
-                            <div id="top-payer-container" style="font-size: 1.1rem; color: var(--success); font-weight: bold;">N/A</div>
+                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-store" style="color: var(--primary);"></i> Tienda que más ha vendido</h4>
+                            <div id="top-store-container" style="font-size: 1.1rem; color: var(--primary); font-weight: bold;">N/A</div>
                         </div>
                         <div class="card">
-                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-bag-shopping" style="color: var(--primary);"></i> Cliente con más compras / pagos</h4>
-                            <div id="top-buyer-container" style="font-size: 1.1rem; color: var(--primary); font-weight: bold;">N/A</div>
+                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-user-tie" style="color: var(--success);"></i> Empleado que más ha subido</h4>
+                            <div id="top-employee-container" style="font-size: 1.1rem; color: var(--success); font-weight: bold;">N/A</div>
+                        </div>
+                        <div class="card">
+                            <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-trophy" style="color: var(--warning);"></i> Cliente que más dinero ha aportado</h4>
+                            <div id="top-payer-container" style="font-size: 1.1rem; color: var(--warning); font-weight: bold;">N/A</div>
                         </div>
                     </div>
 
                     <div class="charts-grid" style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                         <div class="card" style="text-align: center;"><h4 style="margin-bottom: 15px;">Distribución de Métodos de Pago</h4><div style="max-width: 280px; margin: 0 auto;"><canvas id="paymentMethodsChart"></canvas></div></div>
                         <div class="card" style="text-align: center;"><h4 style="margin-bottom: 15px;">Estado de Créditos Cashea</h4><div style="max-width: 280px; margin: 0 auto;"><canvas id="casheaStatusChart"></canvas></div></div>
+                    </div>
+                </section>
+
+                <!-- VISTA GESTIÓN DE EMPLEADOS (SOLO ADMIN) -->
+                <section id="view-employees" class="dashboard-view hidden">
+                    <div class="section-header">
+                        <div><h3>Gestión y Creación de Empleados</h3><p>Registra nuevos accesos para las diferentes sucursales.</p></div>
+                    </div>
+                    <div class="card" style="max-width: 500px; margin-bottom: 25px;">
+                        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-user-plus"></i> Nuevo Empleado / Sucursal</h4>
+                        <form id="admin-create-user-form">
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-user"></i> Nombre de Usuario</label>
+                                <input type="text" id="admin-reg-user" required placeholder="Ej: cajero_acarigua">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-lock"></i> Contraseña</label>
+                                <input type="password" id="admin-reg-pass" required placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-store"></i> Tienda / Sucursal Asignada</label>
+                                <select id="admin-reg-store" required>
+                                    <option value="Caracas">Caracas</option>
+                                    <option value="Cabudare">Cabudare</option>
+                                    <option value="Acarigua">Acarigua</option>
+                                    <option value="San Felipe">San Felipe</option>
+                                    <option value="metropolis-barquisimeto">Metropolis Barquisimeto</option>
+                                    <option value="sambil-barquisimeto">Sambil Barquisimeto</option>
+                                    <option value="Valencia">Valencia</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-floppy-disk"></i> Crear Empleado</button>
+                        </form>
+                    </div>
+
+                    <div class="table-card card">
+                        <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-color);"><h4 style="margin: 0;"><i class="fa-solid fa-users"></i> Empleados Registrados en el Sistema</h4></div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>Usuario</th><th>Rol</th><th>Sucursal</th></tr></thead>
+                                <tbody id="employees-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -369,7 +381,6 @@
             <form id="payment-form">
                 <input type="hidden" id="edit-payment-id">
                 
-                <!-- Selector de Tienda (Visible solo para administradores) -->
                 <div class="form-group admin-only-field">
                     <label><i class="fa-solid fa-store"></i> Tienda de Registro</label>
                     <select id="modal-payment-store" required>
@@ -445,7 +456,6 @@
         <div class="modal-content card">
             <div class="modal-header"><h3><i class="fa-solid fa-credit-card"></i> Nueva Orden Cashea</h3><button id="close-cashea-modal-btn" class="close-btn">&times;</button></div>
             <form id="cashea-form">
-                <!-- Selector de Tienda (Visible solo para administradores) -->
                 <div class="form-group admin-only-field">
                     <label><i class="fa-solid fa-store"></i> Tienda de Registro</label>
                     <select id="modal-cashea-store" required>
