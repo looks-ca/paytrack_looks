@@ -54,7 +54,7 @@
             <div class="hero-content">
                 <span class="badge-pill"><i class="fa-solid fa-shield-halved"></i> Control Financiero & Cashea</span>
                 <h2>Administra tus pagos, créditos y caja de forma inteligente</h2>
-                <p>Control absoluto de tus transacciones, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones.</p>
+                <p>Control absoluto de tus transacciones, métodos de pago, clientes y seguimiento de cuotas Cashea con cálculo exacto de comisiones en la nube.</p>
                 <div class="hero-buttons">
                     <button id="hero-get-started" class="btn btn-primary btn-lg">Comenzar Gratis <i class="fa-solid fa-rocket"></i></button>
                 </div>
@@ -414,7 +414,6 @@
                     <div class="form-group"><label><i class="fa-solid fa-dollar-sign"></i> Monto Total Producto ($)</label><input type="number" step="0.01" id="cashea-total-amount" required placeholder="200.00"></div>
                     <div class="form-group"><label><i class="fa-solid fa-percent"></i> Descuento Cashea (%)</label><input type="number" step="0.01" id="cashea-discount-percent" value="10" required></div>
                     
-                    <!-- Selector de Iniciales con opciones: 0, 25, 35, 50, 75 -->
                     <div class="form-group">
                         <label><i class="fa-solid fa-hand-holding-dollar"></i> Inicial del Cliente (%)</label>
                         <select id="cashea-down-payment-percent" required>
@@ -436,7 +435,6 @@
                         </select>
                     </div>
 
-                    <!-- Selector de Cuotas con opciones: 3, 6, 9, 12 -->
                     <div class="form-group">
                         <label><i class="fa-solid fa-layer-group"></i> Total de Cuotas</label>
                         <select id="cashea-total-installments" required>
@@ -449,6 +447,19 @@
 
                     <div class="form-group"><label><i class="fa-solid fa-calendar-days"></i> Próxima Fecha de Pago</label><input type="date" id="cashea-next-date" required></div>
                 </div>
+
+                <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <label><i class="fa-solid fa-qrcode"></i> Generar QR para Comprobante Cashea (Móvil)</label>
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" id="generate-cashea-qr-btn" class="btn btn-outline" style="font-size: 0.85rem;"><i class="fa-solid fa-qrcode"></i> Generar QR Cashea</button>
+                    </div>
+                    <div id="cashea-qr-container" class="hidden" style="margin-top: 10px; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                        <div id="cashea-qrcode" style="display: inline-block; padding: 10px; background: #fff; border-radius: 6px;"></div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Escanea este código con el celular para subir la inicial o abono</p>
+                        <button type="button" id="close-cashea-qr-btn" class="btn btn-outline-danger" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cerrar QR</button>
+                    </div>
+                </div>
+
                 <div class="modal-footer"><button type="button" id="cancel-cashea-btn" class="btn btn-outline">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Registrar Orden Cashea</button></div>
             </form>
         </div>
@@ -511,6 +522,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>

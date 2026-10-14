@@ -1,15 +1,38 @@
-let users = JSON.parse(sessionStorage.getItem('paytrack_users')) || [
+// ==========================================
+// CONFIGURACIÓN DE FIREBASE
+// ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAyiV6IYnCnY9-Fz18irolm1lvty2EVTq0",
+    authDomain: "paytrack-looks.firebaseapp.com",
+    projectId: "paytrack-looks",
+    storageBucket: "paytrack-looks.firebasestorage.app",
+    messagingSenderId: "1055504735615",
+    appId: "1:1055504735615:web:deaf7c1ba336c6f99c4e4a",
+    measurementId: "G-GNF5MEGTHD"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const analytics = getAnalytics(app);
+
+// ==========================================
+// ESTADO Y VARIABLES DE LA APLICACIÓN
+// ==========================================
+let users = [
     { user: 'admin', pass: '1234', role: 'admin' }
 ];
 
-let payments = JSON.parse(sessionStorage.getItem('paytrack_payments')) || [];
-let casheaRecords = JSON.parse(sessionStorage.getItem('paytrack_cashea_records')) || [];
+let payments = [];
+let casheaRecords = [];
 
 let currentUser = null;
 let pendingDeleteCallback = null;
 let activeTabName = 'history';
 let chartsInstance = { methods: null, cashea: null };
-let qrCodeInstance = null;
 
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -46,7 +69,21 @@ window.addEventListener('DOMContentLoaded', () => {
     setupDniAutocomplete('cashea-dni', 'cashea-dni-type', 'cashea-client', 'cashea-phone');
     setupQrGeneratorControls();
     setupFilters();
+    initFirebaseListeners();
 });
+
+// Sincronización en tiempo real con Firestore
+function initFirebaseListeners() {
+    onSnapshot(collection(db, "payments"), (snapshot) => {
+        payments = snapshot.docs.map(doc => ({ idDoc: doc.id, ...doc.data() }));
+        if (currentUser) setupDashboard();
+    });
+
+    onSnapshot(collection(db, "casheaRecords"), (snapshot) => {
+        casheaRecords = snapshot.docs.map(doc => ({ idDoc: doc.id, ...doc.data() }));
+        if (currentUser) setupDashboard();
+    });
+}
 
 function setupFilters() {
     const searchInput = document.getElementById('search-input');
@@ -87,30 +124,30 @@ function setupMobileUploadHandler() {
 
         if (fileInput.files && fileInput.files[0]) {
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = async function(event) {
                 const base64Image = event.target.result;
-                let existingPayments = JSON.parse(sessionStorage.getItem('paytrack_payments')) || [];
-                
                 const now = new Date();
                 const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-                existingPayments.push({
-                    id: Date.now() + Math.random(),
-                    user: 'Cliente (Vía QR Móvil)',
-                    dni: 'V-00000000',
-                    phone: '04140000000',
-                    method: 'Pago Móvil',
-                    amount: 0.00,
-                    ref: 'QR Móvil',
-                    status: 'Proceso',
-                    datetime: formattedDateTime,
-                    image: base64Image
-                });
+                try {
+                    await addDoc(collection(db, "payments"), {
+                        user: 'Cliente (Vía QR Móvil)',
+                        dni: 'V-00000000',
+                        phone: '04140000000',
+                        method: 'Pago Móvil',
+                        amount: 0.00,
+                        ref: 'QR Móvil',
+                        status: 'Proceso',
+                        datetime: formattedDateTime,
+                        image: base64Image
+                    });
 
-                sessionStorage.setItem('paytrack_payments', JSON.stringify(existingPayments));
-
-                mobileForm.classList.add('hidden');
-                document.getElementById('client-success-msg').classList.remove('hidden');
+                    mobileForm.classList.add('hidden');
+                    document.getElementById('client-success-msg').classList.remove('hidden');
+                } catch (error) {
+                    console.error("Error al subir comprobante móvil:", error);
+                    showToast('Error al enviar el comprobante', 'error');
+                }
             };
             reader.readAsDataURL(fileInput.files[0]);
         }
@@ -189,20 +226,19 @@ function setupQrGeneratorControls() {
     const closeQrGenBtn = document.getElementById('close-qr-gen-btn');
     if (closeQrGenBtn) {
         closeQrGenBtn.addEventListener('click', () => {
-            const container = document.getElementById('qr-code-generator-container');
-            if (container) container.classList.add('hidden');
+            document.getElementById('qr-code-generator-container').classList.add('hidden');
         });
     }
 
     const closeCasheaQrBtn = document.getElementById('close-cashea-qr-btn');
     if (closeCasheaQrBtn) {
         closeCasheaQrBtn.addEventListener('click', () => {
-            const container = document.getElementById('cashea-qr-container');
-            if (container) container.classList.add('hidden');
+            document.getElementById('cashea-qr-container').classList.add('hidden');
         });
     }
 }
 
+// Elementos de la UI y Navegación
 const landingContainer = document.getElementById('landing-container');
 const authContainer = document.getElementById('auth-container');
 const appContainer = document.getElementById('app-container');
@@ -358,8 +394,7 @@ if (loginForm) {
         const userInput = document.getElementById('login-user').value.trim();
         const passInput = document.getElementById('login-pass').value.trim();
 
-        const currentUsers = JSON.parse(sessionStorage.getItem('paytrack_users')) || users;
-        const foundUser = currentUsers.find(u => u.user.toLowerCase() === userInput.toLowerCase() && u.pass === passInput);
+        const foundUser = users.find(u => u.user.toLowerCase() === userInput.toLowerCase() && u.pass === passInput);
 
         if (foundUser) {
             currentUser = foundUser;
@@ -367,9 +402,7 @@ if (loginForm) {
             authContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
 
-            const displaySpan = document.getElementById('user-display');
-            if (displaySpan) displaySpan.textContent = currentUser.user;
-
+            document.getElementById('user-display').textContent = currentUser.user;
             showToast(`Bienvenido a Paytrack, ${currentUser.user}`, 'success');
             setupDashboard();
         } else {
@@ -384,19 +417,13 @@ if (registerForm) {
         const regUser = document.getElementById('reg-user').value.trim();
         const regPass = document.getElementById('reg-pass').value.trim();
 
-        let currentUsers = JSON.parse(sessionStorage.getItem('paytrack_users')) || users;
-        const exists = currentUsers.some(u => u.user.toLowerCase() === regUser.toLowerCase());
-
+        const exists = users.some(u => u.user.toLowerCase() === regUser.toLowerCase());
         if (exists) {
             showToast('El nombre de usuario ya existe', 'error');
             return;
         }
 
-        const newUser = { user: regUser, pass: regPass, role: 'admin' };
-        currentUsers.push(newUser);
-        users = currentUsers;
-        sessionStorage.setItem('paytrack_users', JSON.stringify(currentUsers));
-
+        users.push({ user: regUser, pass: regPass, role: 'admin' });
         showToast('Cuenta creada con éxito. ¡Inicia sesión!', 'success');
         registerForm.reset();
         registerForm.classList.add('hidden');
@@ -425,7 +452,7 @@ function showConfirmModal(message, callback) {
 
 if (confirmCancelBtn) {
     confirmCancelBtn.addEventListener('click', () => {
-        if (confirmModal) confirmModal.classList.add('hidden');
+        confirmModal.classList.add('hidden');
         pendingDeleteCallback = null;
     });
 }
@@ -433,7 +460,7 @@ if (confirmCancelBtn) {
 if (confirmAcceptBtn) {
     confirmAcceptBtn.addEventListener('click', () => {
         if (pendingDeleteCallback) pendingDeleteCallback();
-        if (confirmModal) confirmModal.classList.add('hidden');
+        confirmModal.classList.add('hidden');
         pendingDeleteCallback = null;
     });
 }
@@ -443,22 +470,20 @@ function openPaymentModalForNew() {
     document.getElementById('edit-payment-id').value = '';
     paymentForm.reset();
     document.getElementById('modal-client-dni-type').value = 'V';
-    if (paymentModal) paymentModal.classList.remove('hidden');
+    paymentModal.classList.remove('hidden');
 }
 
-if (closeModalBtn) closeModalBtn.addEventListener('click', () => paymentModal && paymentModal.classList.add('hidden'));
-if (closeViewerBtn) closeViewerBtn.addEventListener('click', () => imageViewerModal && imageViewerModal.classList.add('hidden'));
+if (closeModalBtn) closeModalBtn.addEventListener('click', () => paymentModal.classList.add('hidden'));
+if (closeViewerBtn) closeViewerBtn.addEventListener('click', () => imageViewerModal.classList.add('hidden'));
 
 if (paymentForm) {
     paymentForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const editId = document.getElementById('edit-payment-id').value;
         const targetUser = document.getElementById('modal-client-input').value.trim();
-        
         const dniType = document.getElementById('modal-client-dni-type').value;
         const dniNum = document.getElementById('modal-client-dni').value.trim();
         const dni = `${dniType}-${dniNum}`;
-
         const phone = document.getElementById('modal-client-phone').value.trim();
         
         const row = document.querySelector('.payment-row');
@@ -467,73 +492,64 @@ if (paymentForm) {
         const amount = parseFloat(row.querySelector('.pay-amount').value);
         const ref = row.querySelector('.pay-ref').value;
 
-        let imageBase64 = '';
         const fileInput = paymentFileInput;
         if (fileInput && fileInput.files && fileInput.files[0]) {
             const reader = new FileReader();
             reader.onload = function(uploadEvent) {
-                imageBase64 = uploadEvent.target.result;
-                savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, imageBase64);
+                savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, uploadEvent.target.result);
             };
             reader.readAsDataURL(fileInput.files[0]);
         } else {
+            let existingImage = '';
             if (editId) {
-                const existing = payments.find(p => p.id == editId);
-                imageBase64 = existing ? existing.image : '';
+                const existing = payments.find(p => p.idDoc === editId);
+                existingImage = existing ? existing.image : '';
             }
-            savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, imageBase64);
+            savePaymentData(editId, targetUser, dni, phone, method, status, amount, ref, existingImage);
         }
     });
 }
 
-function savePaymentData(editId, user, dni, phone, method, status, amount, ref, image) {
+async function savePaymentData(editId, user, dni, phone, method, status, amount, ref, image) {
     const now = new Date();
     const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-    if (editId) {
-        payments = payments.map(p => {
-            if (p.id == editId) {
-                return { ...p, user, dni, phone, method, status, amount, ref, image: image || p.image };
-            }
-            return p;
-        });
-        showToast('Pago actualizado correctamente', 'success');
-    } else {
-        payments.push({
-            id: Date.now() + Math.random(),
-            user, dni, phone, method, amount, ref, status,
-            datetime: formattedDateTime,
-            image
-        });
-        showToast('Pago registrado con fecha y hora automática', 'success');
+    try {
+        if (editId) {
+            const paymentRef = doc(db, "payments", editId);
+            await updateDoc(paymentRef, { user, dni, phone, method, status, amount, ref, image });
+            showToast('Pago actualizado en Firebase', 'success');
+        } else {
+            await addDoc(collection(db, "payments"), {
+                user, dni, phone, method, amount, ref, status,
+                datetime: formattedDateTime,
+                image
+            });
+            showToast('Pago guardado en Firebase con éxito', 'success');
+        }
+        paymentModal.classList.add('hidden');
+        paymentForm.reset();
+    } catch (error) {
+        console.error("Error al guardar pago:", error);
+        showToast('Error al guardar en la base de datos', 'error');
     }
-
-    sessionStorage.setItem('paytrack_payments', JSON.stringify(payments));
-    paymentModal.classList.add('hidden');
-    paymentForm.reset();
-    setupDashboard();
 }
 
-if (closeCasheaModalBtn) closeCasheaModalBtn.addEventListener('click', () => casheaModal && casheaModal.classList.add('hidden'));
-if (cancelCasheaBtn) cancelCasheaBtn.addEventListener('click', () => casheaModal && casheaModal.classList.add('hidden'));
-
-if (closeAbonoModalBtn) closeAbonoModalBtn.addEventListener('click', () => casheaAbonoModal && casheaAbonoModal.classList.add('hidden'));
-if (cancelAbonoBtn) cancelAbonoBtn.addEventListener('click', () => casheaAbonoModal && casheaAbonoModal.classList.add('hidden'));
-
-if (closeUnpaidModalBtn) closeUnpaidModalBtn.addEventListener('click', () => unpaidModal && unpaidModal.classList.add('hidden'));
-if (closeUnpaidModalFooterBtn) closeUnpaidModalFooterBtn.addEventListener('click', () => unpaidModal && unpaidModal.classList.add('hidden'));
+if (closeCasheaModalBtn) closeCasheaModalBtn.addEventListener('click', () => casheaModal.classList.add('hidden'));
+if (cancelCasheaBtn) cancelCasheaBtn.addEventListener('click', () => casheaModal.classList.add('hidden'));
+if (closeAbonoModalBtn) closeAbonoModalBtn.addEventListener('click', () => casheaAbonoModal.classList.add('hidden'));
+if (cancelAbonoBtn) cancelAbonoBtn.addEventListener('click', () => casheaAbonoModal.classList.add('hidden'));
+if (closeUnpaidModalBtn) closeUnpaidModalBtn.addEventListener('click', () => unpaidModal.classList.add('hidden'));
+if (closeUnpaidModalFooterBtn) closeUnpaidModalFooterBtn.addEventListener('click', () => unpaidModal.classList.add('hidden'));
 
 if (casheaForm) {
-    casheaForm.addEventListener('submit', (e) => {
+    casheaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const orderId = document.getElementById('cashea-order-id').value.trim();
         const user = document.getElementById('cashea-client').value.trim();
-        
         const dniType = document.getElementById('cashea-dni-type').value;
         const dniNum = document.getElementById('cashea-dni').value.trim();
         const dni = `${dniType}-${dniNum}`;
-
         const phone = document.getElementById('cashea-phone').value.trim();
         const totalAmount = parseFloat(document.getElementById('cashea-total-amount').value);
         const discountPercent = parseFloat(document.getElementById('cashea-discount-percent').value) || 0;
@@ -555,102 +571,105 @@ if (casheaForm) {
         const now = new Date();
         const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-        const newCashea = {
-            id: Date.now() + Math.random(),
-            orderId,
-            user, dni, phone,
-            totalAmount,
-            discountPercent,
-            downPaymentPercent,
-            paidAmount: clientDownPaymentAmount,
-            totalInstallments,
-            paidInstallments: 0,
-            nextDate,
-            status: 'En Proceso',
-            settlementStatus: 'En Tránsito',
-            datetime: formattedDateTime
-        };
-
-        casheaRecords.push(newCashea);
-        sessionStorage.setItem('paytrack_cashea_records', JSON.stringify(casheaRecords));
-
-        if (clientDownPaymentAmount > 0) {
-            payments.push({
-                id: Date.now() + Math.random(),
-                user, dni, phone,
-                method: casheaMethod,
-                amount: clientDownPaymentAmount,
-                ref: `Inicial Ord #${orderId}`,
-                status: 'Pagado',
-                datetime: formattedDateTime,
-                image: ''
+        try {
+            await addDoc(collection(db, "casheaRecords"), {
+                orderId, user, dni, phone, totalAmount, discountPercent, downPaymentPercent,
+                paidAmount: clientDownPaymentAmount,
+                totalInstallments,
+                paidInstallments: 0,
+                nextDate,
+                status: 'En Proceso',
+                settlementStatus: 'En Tránsito',
+                datetime: formattedDateTime
             });
-            sessionStorage.setItem('paytrack_payments', JSON.stringify(payments));
-        }
 
-        casheaModal.classList.add('hidden');
-        casheaForm.reset();
-        document.getElementById('cashea-dni-type').value = 'V';
-        showToast(`Orden Cashea #${orderId} registrada correctamente`, 'success');
-        setupDashboard();
+            if (clientDownPaymentAmount > 0) {
+                await addDoc(collection(db, "payments"), {
+                    user, dni, phone,
+                    method: casheaMethod,
+                    amount: clientDownPaymentAmount,
+                    ref: `Inicial Ord #${orderId}`,
+                    status: 'Pagado',
+                    datetime: formattedDateTime,
+                    image: ''
+                });
+            }
+
+            casheaModal.classList.add('hidden');
+            casheaForm.reset();
+            document.getElementById('cashea-dni-type').value = 'V';
+            showToast(`Orden Cashea #${orderId} guardada en Firebase`, 'success');
+        } catch (error) {
+            console.error("Error al registrar orden Cashea:", error);
+            showToast('Error al registrar la orden', 'error');
+        }
     });
 }
 
 if (casheaAbonoForm) {
-    casheaAbonoForm.addEventListener('submit', (e) => {
+    casheaAbonoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = parseFloat(document.getElementById('abono-cashea-id').value);
+        const idDoc = document.getElementById('abono-cashea-id').value;
         const amount = parseFloat(document.getElementById('abono-amount').value);
         const abonoMethod = document.getElementById('abono-payment-method').value;
         const nextDate = document.getElementById('abono-next-date').value;
 
-        const record = casheaRecords.find(c => c.id === id);
+        const record = casheaRecords.find(c => c.idDoc === idDoc);
         if (record) {
-            record.paidAmount += amount;
-            record.paidInstallments += 1;
-            record.nextDate = nextDate;
-
+            const newPaidAmount = record.paidAmount + amount;
+            const newPaidInstallments = record.paidInstallments + 1;
             const finalPrice = record.totalAmount * (1 - (record.discountPercent / 100));
             
-            if (record.paidAmount >= finalPrice) {
-                record.status = 'Pagado';
-                record.settlementStatus = 'Liquidado';
+            let status = record.status;
+            let settlementStatus = record.settlementStatus;
+
+            if (newPaidAmount >= finalPrice) {
+                status = 'Pagado';
+                settlementStatus = 'Liquidado';
             }
 
-            sessionStorage.setItem('paytrack_cashea_records', JSON.stringify(casheaRecords));
+            try {
+                const casheaRef = doc(db, "casheaRecords", idDoc);
+                await updateDoc(casheaRef, {
+                    paidAmount: newPaidAmount,
+                    paidInstallments: newPaidInstallments,
+                    nextDate: nextDate,
+                    status,
+                    settlementStatus
+                });
 
-            const now = new Date();
-            const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            
-            payments.push({
-                id: Date.now() + Math.random(),
-                user: record.user,
-                dni: record.dni,
-                phone: record.phone,
-                method: abonoMethod,
-                amount: amount,
-                ref: `Cuota Ord #${record.orderId}`,
-                status: 'Pagado',
-                datetime: formattedDateTime,
-                image: ''
-            });
-            sessionStorage.setItem('paytrack_payments', JSON.stringify(payments));
+                const now = new Date();
+                const formattedDateTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                
+                await addDoc(collection(db, "payments"), {
+                    user: record.user,
+                    dni: record.dni,
+                    phone: record.phone,
+                    method: abonoMethod,
+                    amount: amount,
+                    ref: `Cuota Ord #${record.orderId}`,
+                    status: 'Pagado',
+                    datetime: formattedDateTime,
+                    image: ''
+                });
 
-            casheaAbonoModal.classList.add('hidden');
-            casheaAbonoForm.reset();
-            showToast('Abono registrado con éxito', 'success');
-            setupDashboard();
+                casheaAbonoModal.classList.add('hidden');
+                casheaAbonoForm.reset();
+                showToast('Abono registrado en Firebase', 'success');
+            } catch (error) {
+                console.error("Error al registrar abono:", error);
+                showToast('Error al registrar el abono', 'error');
+            }
         }
     });
 }
 
 function exportTableToExcel(filename, tableType) {
     let csv = [];
-    
     if (tableType === 'payments') {
         csv.push(["FechaHora", "Cliente", "Cedula", "Telefono", "Metodo", "Monto", "Referencia", "Estado"].join(";"));
         payments.forEach(p => {
-            let row = [
+            csv.push([
                 `"${p.datetime || ''}"`,
                 `"${(p.user || '').replace(/"/g, '""')}"`,
                 `"${p.dni || ''}"`,
@@ -659,13 +678,12 @@ function exportTableToExcel(filename, tableType) {
                 p.amount,
                 `"${(p.ref || '').replace(/"/g, '""')}"`,
                 `"${p.status || ''}"`
-            ];
-            csv.push(row.join(";"));
+            ].join(";"));
         });
     } else if (tableType === 'cashea') {
         csv.push(["Orden", "FechaHora", "Cliente", "Cedula", "Telefono", "MontoTotal", "DescuentoPct", "InicialPct", "Abonado", "Estado", "Liquidacion"].join(";"));
         casheaRecords.forEach(c => {
-            let row = [
+            csv.push([
                 `"${c.orderId || ''}"`,
                 `"${c.datetime || ''}"`,
                 `"${(c.user || '').replace(/"/g, '""')}"`,
@@ -677,22 +695,17 @@ function exportTableToExcel(filename, tableType) {
                 c.paidAmount,
                 `"${c.status || ''}"`,
                 `"${c.settlementStatus || ''}"`
-            ];
-            csv.push(row.join(";"));
+            ].join(";"));
         });
     }
 
-    let csvContent = "\uFEFF" + csv.join("\n");
-    let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    let url = URL.createObjectURL(blob);
-    
+    let blob = new Blob(["\uFEFF" + csv.join("\n")], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     showToast('Archivo Excel exportado con éxito', 'success');
 }
 
@@ -809,8 +822,8 @@ function renderTable() {
             <td><span class="badge status-${p.status === 'Pagado' ? 'pagado' : 'proceso'}">${p.status}</span></td>
             <td>
                 <div class="action-buttons-group">
-                    <button class="btn-icon-action" title="Editar Pago" onclick="openEditPayment(${p.id})"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-icon-action btn-icon-delete" title="Eliminar" onclick="deletePayment(${p.id})"><i class="fa-solid fa-trash"></i></button>
+                    <button class="btn-icon-action" title="Editar Pago" onclick="openEditPayment('${p.idDoc}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon-action btn-icon-delete" title="Eliminar" onclick="deletePayment('${p.idDoc}')"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         `;
@@ -843,8 +856,8 @@ function renderCasheaTable() {
             <td><span class="badge ${c.settlementStatus === 'Liquidado' ? 'status-pagado' : 'status-proceso'}">${c.settlementStatus}</span></td>
             <td>
                 <div class="action-buttons-group">
-                    ${remaining > 0 ? `<button class="btn-icon-action btn-cashea-yellow" title="Abonar Cuota" onclick="openAbonoModal(${c.id})"><i class="fa-solid fa-credit-card"></i></button>` : ''}
-                    <button class="btn-icon-action btn-icon-delete" title="Eliminar" onclick="deleteCashea(${c.id})"><i class="fa-solid fa-trash"></i></button>
+                    ${remaining > 0 ? `<button class="btn-icon-action btn-cashea-yellow" title="Abonar Cuota" onclick="openAbonoModal('${c.idDoc}')"><i class="fa-solid fa-credit-card"></i></button>` : ''}
+                    <button class="btn-icon-action btn-icon-delete" title="Eliminar" onclick="deleteCashea('${c.idDoc}')"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         `;
@@ -853,13 +866,6 @@ function renderCasheaTable() {
 }
 
 function renderMetrics() {
-    const totalAmountElem = document.getElementById('kpi-total-amount');
-    const volumeElem = document.getElementById('kpi-volume');
-    const casheaCommissionElem = document.getElementById('kpi-cashea-commission');
-    const casheaInitCommissionElem = document.getElementById('kpi-cashea-init-commission');
-    const casheaTransitElem = document.getElementById('kpi-cashea-transit');
-    const casheaCollectedElem = document.getElementById('kpi-cashea-collected');
-    
     const startDate = document.getElementById('metrics-start-date') ? document.getElementById('metrics-start-date').value : '';
     const endDate = document.getElementById('metrics-end-date') ? document.getElementById('metrics-end-date').value : '';
 
@@ -898,7 +904,6 @@ function renderMetrics() {
 
         collectedCashea += c.paidAmount;
         totalCasheaCommission7 += finalPrice * 0.07;
-
         const clientInitialAmt = finalPrice * (c.downPaymentPercent / 100);
         totalCasheaCommissionInit4 += clientInitialAmt * 0.04;
 
@@ -925,12 +930,12 @@ function renderMetrics() {
         }
     }
 
-    if (totalAmountElem) totalAmountElem.textContent = `$${totalCaja.toFixed(2)}`;
-    if (volumeElem) volumeElem.textContent = `$${totalVolume.toFixed(2)}`;
-    if (casheaCommissionElem) casheaCommissionElem.textContent = `$${totalCasheaCommission7.toFixed(2)}`;
-    if (casheaInitCommissionElem) casheaInitCommissionElem.textContent = `$${totalCasheaCommissionInit4.toFixed(2)}`;
-    if (casheaTransitElem) casheaTransitElem.textContent = `$${transitTotal.toFixed(2)}`;
-    if (casheaCollectedElem) casheaCollectedElem.textContent = `$${collectedCashea.toFixed(2)}`;
+    document.getElementById('kpi-total-amount').textContent = `$${totalCaja.toFixed(2)}`;
+    document.getElementById('kpi-volume').textContent = `$${totalVolume.toFixed(2)}`;
+    document.getElementById('kpi-cashea-commission').textContent = `$${totalCasheaCommission7.toFixed(2)}`;
+    document.getElementById('kpi-cashea-init-commission').textContent = `$${totalCasheaCommissionInit4.toFixed(2)}`;
+    document.getElementById('kpi-cashea-transit').textContent = `$${transitTotal.toFixed(2)}`;
+    document.getElementById('kpi-cashea-collected').textContent = `$${collectedCashea.toFixed(2)}`;
 
     document.getElementById('top-payer-container').textContent = topPayer;
     document.getElementById('top-buyer-container').textContent = topBuyer;
@@ -947,7 +952,6 @@ function renderCharts(activePayments) {
         let pvCount = activePayments.filter(p => p.method === 'Punto de Venta').length;
         let zelleCount = activePayments.filter(p => p.method === 'Zelle').length;
         let efCount = activePayments.filter(p => p.method === 'Efectivo').length;
-        
         let casheaPm = activePayments.filter(p => p.method === 'Cashea/Pago Móvil').length;
         let casheaPv = activePayments.filter(p => p.method === 'Cashea/Punto de Venta').length;
         let casheaZelle = activePayments.filter(p => p.method === 'Cashea/Zelle').length;
@@ -994,20 +998,16 @@ function renderCharts(activePayments) {
 }
 
 window.openImageViewer = function(imgSrc) {
-    const viewer = document.getElementById('image-viewer-modal');
-    const fullImg = document.getElementById('viewer-full-image');
-    if (viewer && fullImg) {
-        fullImg.src = imgSrc;
-        viewer.classList.remove('hidden');
-    }
+    document.getElementById('viewer-full-image').src = imgSrc;
+    imageViewerModal.classList.remove('hidden');
 };
 
-window.openEditPayment = function(id) {
-    const p = payments.find(item => item.id == id);
+window.openEditPayment = function(idDoc) {
+    const p = payments.find(item => item.idDoc === idDoc);
     if (!p) return;
 
     document.getElementById('payment-modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Pago';
-    document.getElementById('edit-payment-id').value = p.id;
+    document.getElementById('edit-payment-id').value = p.idDoc;
     document.getElementById('modal-client-input').value = p.user || '';
     document.getElementById('modal-client-phone').value = p.phone || '';
 
@@ -1015,9 +1015,6 @@ window.openEditPayment = function(id) {
         const parts = p.dni.split('-');
         document.getElementById('modal-client-dni-type').value = parts[0] || 'V';
         document.getElementById('modal-client-dni').value = parts[1] || '';
-    } else {
-        document.getElementById('modal-client-dni-type').value = 'V';
-        document.getElementById('modal-client-dni').value = p.dni || '';
     }
 
     const row = document.querySelector('.payment-row');
@@ -1029,29 +1026,35 @@ window.openEditPayment = function(id) {
     paymentModal.classList.remove('hidden');
 };
 
-window.deletePayment = function(id) {
-    showConfirmModal('¿Estás seguro de eliminar este pago?', () => {
-        payments = payments.filter(p => p.id !== id);
-        sessionStorage.setItem('paytrack_payments', JSON.stringify(payments));
-        renderTable();
-        showToast('Pago eliminado', 'success');
+window.deletePayment = function(idDoc) {
+    showConfirmModal('¿Estás seguro de eliminar este pago de Firebase?', async () => {
+        try {
+            await deleteDoc(doc(db, "payments", idDoc));
+            showToast('Pago eliminado de Firebase', 'success');
+        } catch (error) {
+            console.error("Error al eliminar pago:", error);
+            showToast('No se pudo eliminar', 'error');
+        }
     });
 };
 
-window.deleteCashea = function(id) {
-    showConfirmModal('¿Estás seguro de eliminar este registro de Cashea?', () => {
-        casheaRecords = casheaRecords.filter(c => c.id !== id);
-        sessionStorage.setItem('paytrack_cashea_records', JSON.stringify(casheaRecords));
-        renderCasheaTable();
-        showToast('Registro Cashea eliminado', 'success');
+window.deleteCashea = function(idDoc) {
+    showConfirmModal('¿Estás seguro de eliminar este registro Cashea?', async () => {
+        try {
+            await deleteDoc(doc(db, "casheaRecords", idDoc));
+            showToast('Registro Cashea eliminado', 'success');
+        } catch (error) {
+            console.error("Error al eliminar orden Cashea:", error);
+            showToast('No se pudo eliminar', 'error');
+        }
     });
 };
 
-window.openAbonoModal = function(id) {
-    const record = casheaRecords.find(c => c.id === id);
-    if (-record) return;
+window.openAbonoModal = function(idDoc) {
+    const record = casheaRecords.find(c => c.idDoc === idDoc);
+    if (!record) return;
 
-    document.getElementById('abono-cashea-id').value = record.id;
+    document.getElementById('abono-cashea-id').value = record.idDoc;
     document.getElementById('abono-client-name').value = `${record.user} (Orden #${record.orderId})`;
 
     const finalPrice = record.totalAmount * (1 - (record.discountPercent / 100));
